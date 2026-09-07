@@ -3,6 +3,7 @@ import exercises from '../data/exercises.json'
 import { MAJORS, SUBGROUP_BY_ID, muscleSummary } from '../lib/taxonomy.js'
 import { IMG_BASE } from '../lib/constants.js'
 import { useDebounced } from '../lib/hooks.js'
+import { equipmentOptionsFor } from '../lib/equipment.js'
 import { useStore } from '../App.jsx'
 import Chip from './ui/Chip.jsx'
 import Segmented from './ui/Segmented.jsx'
@@ -13,15 +14,6 @@ const LEVELS = ['beginner', 'intermediate', 'expert']
 const MECHANICS = ['compound', 'isolation', 'unspecified']
 const FORCES = ['push', 'pull', 'static', 'unspecified']
 const ROW_HEIGHT = 68
-
-// "all" isn't a stored profile in settings.equipmentProfiles (only "home"
-// and "gym" are) -- it means no equipment restriction at all, so its chip
-// set is every equipment value actually present in the data.
-const ALL_EQUIPMENT = [...new Set(exercises.map((e) => e.equipment))].sort()
-
-function equipmentOptionsFor(equipmentProfiles, activeProfile) {
-  return activeProfile === 'all' ? ALL_EQUIPMENT : equipmentProfiles[activeProfile]
-}
 const LIST_HEIGHT = 520
 
 function toggle(set, value) {
