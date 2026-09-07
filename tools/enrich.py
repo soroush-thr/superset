@@ -189,6 +189,13 @@ def enrich(ex):
     acc = {k: round(v / total, 4) for k, v in acc.items() if v / total >= 0.02}
     total = sum(acc.values())
     acc = {k: round(v / total, 4) for k, v in acc.items()}
+    # Rounding every weight to 4dp can leave the sum a few 1e-4 off 1.0.
+    # Push the residual onto the largest weight so the stored sum is exact
+    # (acceptance checklist requires within 1e-6, not just "close").
+    residual = round(1.0 - sum(acc.values()), 10)
+    if residual != 0:
+        top_key = max(acc, key=acc.get)
+        acc[top_key] = round(acc[top_key] + residual, 10)
     return acc, ("high" if fired else "med")
 
 

@@ -226,7 +226,7 @@ function SlotEditor({ routine, day, slot, canMergeWithNext, dispatch }) {
 
   return (
     <div className={`sx-slot${isPaired ? ' sx-slot-paired' : ''}`}>
-      {isPaired && <span className="sx-eyebrow sx-slot-superset-label">Superset</span>}
+      {isPaired && <span className="sx-eyebrow sx-slot-paired-label">Superset</span>}
       {slot.entries.map((entry, entryIndex) => (
         <EntryEditor
           key={entryIndex}

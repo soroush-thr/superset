@@ -310,7 +310,7 @@ export function reducer(state, action) {
       }
 
     // "Make superset" / "Split" -- section 1a rule 1: stored type is
-    // "paired", never "superset". UI label stays "Superset" (rule 2).
+    // paired, never the product name. UI label stays Superset (rule 2).
     case 'MERGE_SLOTS_AS_PAIRED':
       return {
         ...state,
