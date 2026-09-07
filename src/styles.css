@@ -416,10 +416,28 @@ button.sx-primary {
   padding: 20px;
 }
 
-.sx-bodymap-placeholder-box {
-  margin-top: 10px;
-  height: 320px;
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
-  background: var(--surface-2);
+.sx-bodymap {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  margin: 10px auto 0;
+}
+
+.sx-bodymap-silhouette {
+  fill: var(--surface-2);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.sx-bodymap-region {
+  stroke: transparent;
+  stroke-width: 1.5;
+  transition: stroke 0.12s ease;
+}
+
+/* Section 7.3: hover and focus raise stroke to --accent at 1.5px. */
+.sx-bodymap-region:hover,
+.sx-bodymap-region:focus-visible {
+  stroke: var(--accent);
+  outline: none;
 }
