@@ -1,22 +1,13 @@
 import React, { useMemo } from 'react'
 import { VIEW_BOX, SILHOUETTE_D, FRONT_REGIONS, BACK_REGIONS } from '../lib/bodyRegions.js'
 import { heatColor } from '../lib/heat.js'
-import taxonomy from '../data/taxonomy.json'
+import { SUBGROUP_BY_ID, REGION_LABELS } from '../lib/taxonomy.js'
 import { DEFAULT_TARGETS } from '../lib/constants.js'
 
 // section 7: subgroup id -> region id, built once from taxonomy.json.
-const SUBGROUP_TO_REGION = Object.fromEntries(taxonomy.subgroups.map((s) => [s.id, s.region]))
-
-// region id -> a human label, for the <title> a11y text (section 7.2: no
-// text inside the SVG itself). When several sub-groups share a region
-// (e.g. the three triceps heads), use the region's own display name.
-const REGION_LABELS = (() => {
-  const labels = {}
-  for (const s of taxonomy.subgroups) {
-    if (!labels[s.region]) labels[s.region] = s.name
-  }
-  return labels
-})()
+const SUBGROUP_TO_REGION = Object.fromEntries(
+  Object.entries(SUBGROUP_BY_ID).map(([id, s]) => [id, s.region]),
+)
 
 /**
  * Section 7.1: sum every sub-group's value into its region. `values` is

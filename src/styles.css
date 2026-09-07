@@ -441,3 +441,292 @@ button.sx-primary {
   stroke: var(--accent);
   outline: none;
 }
+
+/* ------------------------------------------------------------------ forms */
+
+.sx-input {
+  min-height: 40px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: var(--fs-3);
+}
+
+.sx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sx-field-note {
+  flex: 1;
+  min-width: 160px;
+}
+
+/* --------------------------------------------------------------- 9.1 library */
+
+.sx-library-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.sx-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.sx-filter-row {
+  margin-bottom: 10px;
+}
+
+.sx-filter-row-title {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sx-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sx-chip-static {
+  cursor: default;
+  min-height: auto;
+  padding: 2px 8px;
+  font-size: var(--fs-1);
+}
+
+.sx-result-count {
+  margin: 14px 0 8px;
+}
+
+.sx-empty-state {
+  color: var(--text-dim);
+  padding: 20px 0;
+}
+
+.sx-virtual-list {
+  overflow-y: auto;
+  border-top: 1px solid var(--line-soft);
+}
+
+.sx-exercise-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 0 4px;
+}
+
+.sx-exercise-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  min-height: 56px;
+  padding: 4px;
+  text-align: left;
+}
+
+.sx-exercise-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.sx-exercise-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sx-exercise-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--surface-2);
+}
+
+.sx-exercise-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sx-exercise-name {
+  font-size: var(--fs-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sx-exercise-row-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sx-exercise-muscle-summary {
+  color: var(--text-faint);
+  font-size: var(--fs-1);
+}
+
+.sx-add-to-day {
+  flex-shrink: 0;
+  max-width: 120px;
+}
+
+/* --------------------------------------------------------- 9.2 detail drawer */
+
+.sx-detail-images {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.sx-detail-images img,
+.sx-detail-image-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  object-fit: cover;
+}
+
+.sx-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.sx-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sx-weight-list {
+  list-style: none;
+  margin: 8px 0 16px;
+  padding: 0;
+}
+
+.sx-weight-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.sx-steps-list {
+  padding-left: 20px;
+  color: var(--text-dim);
+}
+
+.sx-steps-list li {
+  margin-bottom: 8px;
+}
+
+/* --------------------------------------------------------- 9.3 routine builder */
+
+.sx-routine-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0 20px;
+  flex-wrap: wrap;
+}
+
+.sx-cycle-days {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.sx-helper-text {
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+  max-width: 320px;
+}
+
+.sx-day-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.sx-day-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sx-day-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-4);
+}
+
+.sx-slot {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.sx-slot-paired {
+  border-left: 3px solid var(--accent);
+}
+
+.sx-slot-superset-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sx-entry {
+  padding: 6px 0;
+}
+
+.sx-entry + .sx-entry {
+  border-top: 1px dashed var(--line-soft);
+}
+
+.sx-entry-name {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.sx-entry-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.sx-slot-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

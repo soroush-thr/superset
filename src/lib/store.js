@@ -229,6 +229,18 @@ export function reducer(state, action) {
       }
     }
 
+    case 'UPDATE_DAY':
+      return {
+        ...state,
+        routines: state.routines.map((r) => {
+          if (r.id !== action.routineId) return r
+          return {
+            ...r,
+            days: r.days.map((d) => (d.id === action.dayId ? { ...d, ...action.patch } : d)),
+          }
+        }),
+      }
+
     case 'DELETE_DAY':
       return {
         ...state,

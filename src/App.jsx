@@ -14,6 +14,25 @@ export function useStore() {
   return ctx
 }
 
+// The sticky right-column body map (section 8.4) is rendered by the shell,
+// but its data comes from whichever screen is active (Routine or
+// Coverage). This context is the seam: a screen calls useBodyMapFeed() to
+// push { front, back, scaleMax, onRegionClick }, and the shell's <aside>
+// just renders whatever was last pushed.
+const BodyMapFeedContext = createContext(null)
+
+const EMPTY_BODY_MAP_FEED = { front: {}, back: {}, scaleMax: undefined, onRegionClick: undefined }
+
+/** Call from a screen with a live body map. Push new values whenever they
+ *  change; the shell re-renders the aside from the latest push. */
+export function useBodyMapFeed(feed) {
+  const setFeed = useContext(BodyMapFeedContext)
+  useEffect(() => {
+    setFeed(feed)
+    return () => setFeed(EMPTY_BODY_MAP_FEED)
+  }, [feed, setFeed])
+}
+
 function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, initState)
   const isFirstRender = useRef(true)
@@ -58,6 +77,7 @@ export default function App() {
 
 function AppShell() {
   const [activeScreen, setActiveScreen] = useState('library')
+  const [bodyMapFeed, setBodyMapFeed] = useState(EMPTY_BODY_MAP_FEED)
   const screen = SCREENS.find((s) => s.id === activeScreen)
   const { Component } = screen
 
@@ -83,13 +103,25 @@ function AppShell() {
         <div className="sx-layout">
           <main className="sx-main">
             <div className="sx-content">
-              <Component />
+              <BodyMapFeedContext.Provider value={setBodyMapFeed}>
+                <Component />
+              </BodyMapFeedContext.Provider>
             </div>
           </main>
           {screen.hasBodyMap && (
             <aside className="sx-side sx-side--active" aria-label="Body map">
-              <BodyMap view="front" />
-              <BodyMap view="back" />
+              <BodyMap
+                view="front"
+                values={bodyMapFeed.front}
+                scaleMax={bodyMapFeed.scaleMax}
+                onRegionClick={bodyMapFeed.onRegionClick}
+              />
+              <BodyMap
+                view="back"
+                values={bodyMapFeed.back}
+                scaleMax={bodyMapFeed.scaleMax}
+                onRegionClick={bodyMapFeed.onRegionClick}
+              />
             </aside>
           )}
         </div>
