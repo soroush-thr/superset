@@ -1,0 +1,282 @@
+{
+ "version": 1,
+ "secondaryDiscount": 0.5,
+ "majors": [
+  {
+   "id": "chest",
+   "name": "Chest"
+  },
+  {
+   "id": "back",
+   "name": "Back"
+  },
+  {
+   "id": "shoulders",
+   "name": "Shoulders"
+  },
+  {
+   "id": "arms",
+   "name": "Arms"
+  },
+  {
+   "id": "core",
+   "name": "Core"
+  },
+  {
+   "id": "legs",
+   "name": "Legs"
+  },
+  {
+   "id": "neck",
+   "name": "Neck"
+  }
+ ],
+ "subgroups": [
+  {
+   "id": "pec_upper",
+   "name": "Upper chest",
+   "major": "chest",
+   "region": "pec_upper"
+  },
+  {
+   "id": "pec_mid",
+   "name": "Mid chest",
+   "major": "chest",
+   "region": "pec_mid"
+  },
+  {
+   "id": "pec_lower",
+   "name": "Lower chest",
+   "major": "chest",
+   "region": "pec_lower"
+  },
+  {
+   "id": "delt_ant",
+   "name": "Front delt",
+   "major": "shoulders",
+   "region": "delt_ant"
+  },
+  {
+   "id": "delt_lat",
+   "name": "Side delt",
+   "major": "shoulders",
+   "region": "delt_lat"
+  },
+  {
+   "id": "delt_post",
+   "name": "Rear delt",
+   "major": "shoulders",
+   "region": "delt_post"
+  },
+  {
+   "id": "cuff",
+   "name": "Rotator cuff",
+   "major": "shoulders",
+   "region": "cuff"
+  },
+  {
+   "id": "lat",
+   "name": "Lats",
+   "major": "back",
+   "region": "lat"
+  },
+  {
+   "id": "rhomboid",
+   "name": "Rhomboids",
+   "major": "back",
+   "region": "rhomboid"
+  },
+  {
+   "id": "trap_upper",
+   "name": "Upper traps",
+   "major": "back",
+   "region": "trap_upper"
+  },
+  {
+   "id": "trap_mid",
+   "name": "Mid traps",
+   "major": "back",
+   "region": "trap_mid"
+  },
+  {
+   "id": "trap_lower",
+   "name": "Lower traps",
+   "major": "back",
+   "region": "trap_lower"
+  },
+  {
+   "id": "teres",
+   "name": "Teres",
+   "major": "back",
+   "region": "teres"
+  },
+  {
+   "id": "erector",
+   "name": "Spinal erectors",
+   "major": "back",
+   "region": "erector"
+  },
+  {
+   "id": "bicep_long",
+   "name": "Biceps long head",
+   "major": "arms",
+   "region": "bicep"
+  },
+  {
+   "id": "bicep_short",
+   "name": "Biceps short head",
+   "major": "arms",
+   "region": "bicep"
+  },
+  {
+   "id": "brachialis",
+   "name": "Brachialis",
+   "major": "arms",
+   "region": "brachialis"
+  },
+  {
+   "id": "tricep_long",
+   "name": "Triceps long head",
+   "major": "arms",
+   "region": "tricep"
+  },
+  {
+   "id": "tricep_lat",
+   "name": "Triceps lateral",
+   "major": "arms",
+   "region": "tricep"
+  },
+  {
+   "id": "tricep_med",
+   "name": "Triceps medial",
+   "major": "arms",
+   "region": "tricep"
+  },
+  {
+   "id": "forearm_flex",
+   "name": "Forearm flexors",
+   "major": "arms",
+   "region": "forearm"
+  },
+  {
+   "id": "forearm_ext",
+   "name": "Forearm extensors",
+   "major": "arms",
+   "region": "forearm"
+  },
+  {
+   "id": "grip",
+   "name": "Grip",
+   "major": "arms",
+   "region": "forearm"
+  },
+  {
+   "id": "abs_upper",
+   "name": "Upper abs",
+   "major": "core",
+   "region": "abs_upper"
+  },
+  {
+   "id": "abs_lower",
+   "name": "Lower abs",
+   "major": "core",
+   "region": "abs_lower"
+  },
+  {
+   "id": "oblique",
+   "name": "Obliques",
+   "major": "core",
+   "region": "oblique"
+  },
+  {
+   "id": "tva",
+   "name": "Deep core / TVA",
+   "major": "core",
+   "region": "abs_lower"
+  },
+  {
+   "id": "serratus",
+   "name": "Serratus",
+   "major": "core",
+   "region": "serratus"
+  },
+  {
+   "id": "quad_rf",
+   "name": "Rectus femoris",
+   "major": "legs",
+   "region": "quad"
+  },
+  {
+   "id": "quad_vl",
+   "name": "Vastus lateralis",
+   "major": "legs",
+   "region": "quad"
+  },
+  {
+   "id": "quad_vm",
+   "name": "Vastus medialis",
+   "major": "legs",
+   "region": "quad"
+  },
+  {
+   "id": "ham_bf",
+   "name": "Biceps femoris",
+   "major": "legs",
+   "region": "ham"
+  },
+  {
+   "id": "ham_med",
+   "name": "Semis (inner ham)",
+   "major": "legs",
+   "region": "ham"
+  },
+  {
+   "id": "glute_max",
+   "name": "Glute max",
+   "major": "legs",
+   "region": "glute"
+  },
+  {
+   "id": "glute_med",
+   "name": "Glute med / min",
+   "major": "legs",
+   "region": "glute"
+  },
+  {
+   "id": "adductor",
+   "name": "Adductors",
+   "major": "legs",
+   "region": "adductor"
+  },
+  {
+   "id": "hip_flexor",
+   "name": "Hip flexors",
+   "major": "legs",
+   "region": "hip_flexor"
+  },
+  {
+   "id": "calf_gastroc",
+   "name": "Gastrocnemius",
+   "major": "legs",
+   "region": "calf"
+  },
+  {
+   "id": "calf_soleus",
+   "name": "Soleus",
+   "major": "legs",
+   "region": "calf"
+  },
+  {
+   "id": "tibialis",
+   "name": "Tibialis anterior",
+   "major": "legs",
+   "region": "tibialis"
+  },
+  {
+   "id": "neck",
+   "name": "Neck",
+   "major": "neck",
+   "region": "neck"
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+/* Placeholder stylesheet. The full token system and design language land in
+   Phase 4 (see BUILD-PLAN.md section 8). This just keeps Phase 0-3 legible. */
+:root {
+  color-scheme: dark;
+  --bg: #101317;
+  --text: #e6ebf0;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
