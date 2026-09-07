@@ -1,14 +1,425 @@
-/* Placeholder stylesheet. The full token system and design language land in
-   Phase 4 (see BUILD-PLAN.md section 8). This just keeps Phase 0-3 legible. */
+/* Superset design system. See BUILD-PLAN.md section 8.
+   Chroma is reserved for data (the heat ramp) -- every control here is
+   neutral or the single cool accent. Do not add a second decorative accent,
+   gradients on buttons, or coloured category badges. */
+
+/* ------------------------------------------------------------- 8.2 tokens */
+
 :root {
   color-scheme: dark;
+
   --bg: #101317;
+  --surface: #171c22;
+  --surface-2: #1f262e;
+  --line: #2c353f;
+  --line-soft: #222a33;
   --text: #e6ebf0;
+  --text-dim: #8795a4;
+  --text-faint: #5c6875;
+  --accent: #3fbfb4; /* controls only, never data */
+  --accent-dim: #1e4f4c;
+  --under: #4e7fa8; /* status: below target */
+  --in: #4fa77e; /* status: in range */
+  --over: #d8763c; /* status: above ceiling */
+  --radius: 3px;
+
+  /* 8.3 type scale, px */
+  --fs-1: 11px;
+  --fs-2: 13px;
+  --fs-3: 15px;
+  --fs-4: 19px;
+  --fs-5: 26px;
+  --fs-6: 34px;
+
+  --font-display: 'Space Grotesk', 'Grotesk', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  --rail-width: 220px;
+  --bottom-bar-height: 56px;
+}
+
+/* --------------------------------------------------------------- reset */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
+  font-size: var(--fs-3);
+  line-height: 1.4;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Every number in the interface uses the mono face with tabular numerals.
+   Not optional -- section 8.3. */
+.sx-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section eyebrows: mono, 11px, uppercase, wide tracking, faint. */
+.sx-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+/* ------------------------------------------------------------ 8.5 floor */
+
+a,
+button,
+input,
+select,
+textarea,
+[tabindex] {
+  outline-offset: 2px;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+button {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: pointer;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 14px;
+}
+
+button:hover {
+  border-color: var(--text-faint);
+}
+
+button.sx-primary {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* -------------------------------------------------------------- 8.4 layout */
+
+.sx-app {
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Desktop: fixed left rail + content + optional sticky right column. */
+.sx-rail {
+  display: none;
+}
+
+.sx-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+}
+
+.sx-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.sx-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile: the body map sits inline, single column, below the screen's own
+   content -- section 8.4. Full "collapses to a summary strip that expands
+   on tap" behaviour is meaningful only once the real BodyMap (Phase 5)
+   exists to collapse; for now it renders in normal flow. */
+.sx-side {
+  display: none;
+}
+
+.sx-side.sx-side--active {
+  display: block;
+  border-top: 1px solid var(--line);
+  padding: 20px;
+}
+
+@media (min-width: 900px) {
+  .sx-rail {
+    display: flex;
+    flex-direction: column;
+    width: var(--rail-width);
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    padding: 20px 12px;
+    gap: 4px;
+  }
+
+  .sx-layout {
+    flex-direction: row;
+  }
+
+  /* Sticky right column, Routine and Coverage screens only (section 8.4).
+     Live-updates while editing -- the signature moment. */
+  .sx-side.sx-side--active {
+    width: 340px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    max-height: 100vh;
+    overflow-y: auto;
+    border-left: 1px solid var(--line);
+    border-top: none;
+  }
+}
+
+.sx-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  text-align: left;
+  background: transparent;
+  border: none;
+  min-height: 40px;
+  font-size: var(--fs-3);
+}
+
+.sx-rail-item:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.sx-rail-item.sx-active {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.sx-rail-brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--fs-4);
+  padding: 6px 12px 18px;
+}
+
+/* Mobile: bottom tab bar, single column. Body map (when present) collapses
+   to a summary strip that expands on tap -- section 8.4, wired up when
+   BodyMap ships in Phase 5. */
+.sx-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  height: var(--bottom-bar-height);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+
+@media (min-width: 900px) {
+  .sx-bottom-bar {
+    display: none;
+  }
+}
+
+.sx-bottom-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-1);
+  min-height: var(--bottom-bar-height);
+}
+
+.sx-bottom-item.sx-active {
+  color: var(--accent);
+}
+
+.sx-app-body {
+  flex-direction: column;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 899px) {
+  .sx-content {
+    padding-bottom: calc(var(--bottom-bar-height) + 16px);
+  }
+}
+
+/* --------------------------------------------------------- ui primitives */
+
+.sx-chip {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+}
+
+.sx-chip.sx-active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.sx-segmented {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sx-segmented-item {
+  border: none;
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+.sx-segmented-item + .sx-segmented-item {
+  border-left: 1px solid var(--line);
+}
+
+.sx-segmented-item.sx-active {
+  background: var(--surface-2);
+  color: var(--accent);
+}
+
+.sx-number-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sx-number-field-controls {
+  display: flex;
+  align-items: stretch;
+}
+
+.sx-number-field-controls button {
+  border-radius: 0;
+  padding: 0;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.sx-number-field-controls button:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.sx-number-field-controls button:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+  border-left: none;
+}
+
+.sx-number-field-controls input {
+  width: 56px;
+  min-height: 40px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-left: none;
+  border-right: none;
+  -moz-appearance: textfield;
+}
+
+.sx-number-field-controls input::-webkit-outer-spin-button,
+.sx-number-field-controls input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.sx-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sx-drawer {
+  width: min(480px, 100vw);
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+}
+
+.sx-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+
+.sx-drawer-body {
+  padding: 20px;
+}
+
+.sx-bodymap-placeholder-box {
+  margin-top: 10px;
+  height: 320px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
 }

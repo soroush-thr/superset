@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useEffect, useReducer, useRef } from 'react'
+import React, { createContext, useContext, useEffect, useReducer, useRef, useState } from 'react'
 import { reducer, initState, saveState, flushSave } from './lib/store.js'
+import Library from './components/Library.jsx'
+import RoutineBuilder from './components/RoutineBuilder.jsx'
+import Coverage from './components/Coverage.jsx'
+import Settings from './components/Settings.jsx'
+import BodyMap from './components/BodyMap.jsx'
 
 const StoreContext = createContext(null)
 
@@ -33,6 +38,16 @@ function StoreProvider({ children }) {
   return <StoreContext.Provider value={{ state, dispatch }}>{children}</StoreContext.Provider>
 }
 
+// Four screens, in-app tab state -- no router library (decision 10).
+// Screens that carry a live body map in their sticky right column
+// (section 8.4): Routine and Coverage.
+const SCREENS = [
+  { id: 'library', label: 'Library', icon: '▤', Component: Library, hasBodyMap: false },
+  { id: 'routine', label: 'Routine', icon: '☰', Component: RoutineBuilder, hasBodyMap: true },
+  { id: 'coverage', label: 'Coverage', icon: '◉', Component: Coverage, hasBodyMap: true },
+  { id: 'settings', label: 'Settings', icon: '⚙', Component: Settings, hasBodyMap: false },
+]
+
 export default function App() {
   return (
     <StoreProvider>
@@ -41,14 +56,59 @@ export default function App() {
   )
 }
 
-// Placeholder shell. The real four-screen layout, left rail / bottom tabs,
-// and design tokens land in Phase 4 (BUILD-PLAN.md section 8).
 function AppShell() {
-  const { state } = useStore()
+  const [activeScreen, setActiveScreen] = useState('library')
+  const screen = SCREENS.find((s) => s.id === activeScreen)
+  const { Component } = screen
+
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Superset</h1>
-      <p>Routines: {state.routines.length}</p>
+    <div className="sx-app">
+      <nav className="sx-rail" aria-label="Screens">
+        <div className="sx-rail-brand">Superset</div>
+        {SCREENS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={`sx-rail-item${s.id === activeScreen ? ' sx-active' : ''}`}
+            aria-current={s.id === activeScreen ? 'page' : undefined}
+            onClick={() => setActiveScreen(s.id)}
+          >
+            <span aria-hidden="true">{s.icon}</span>
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="sx-app-body">
+        <div className="sx-layout">
+          <main className="sx-main">
+            <div className="sx-content">
+              <Component />
+            </div>
+          </main>
+          {screen.hasBodyMap && (
+            <aside className="sx-side sx-side--active" aria-label="Body map">
+              <BodyMap view="front" />
+              <BodyMap view="back" />
+            </aside>
+          )}
+        </div>
+
+        <nav className="sx-bottom-bar" aria-label="Screens">
+          {SCREENS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`sx-bottom-item${s.id === activeScreen ? ' sx-active' : ''}`}
+              aria-current={s.id === activeScreen ? 'page' : undefined}
+              onClick={() => setActiveScreen(s.id)}
+            >
+              <span aria-hidden="true">{s.icon}</span>
+              {s.label}
+            </button>
+          ))}
+        </nav>
+      </div>
     </div>
   )
 }
