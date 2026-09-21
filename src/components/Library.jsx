@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import exercises from '../data/exercises.json'
 import { MAJORS, SUBGROUP_BY_ID, muscleSummary } from '../lib/taxonomy.js'
 import { IMG_BASE } from '../lib/constants.js'
 import { useDebounced } from '../lib/hooks.js'
-import { equipmentOptionsFor } from '../lib/equipment.js'
-import { useStore } from '../App.jsx'
+import { equipmentOptionsFor, allEquipment } from '../lib/equipment.js'
+import { useStore, useExercises } from '../App.jsx'
 import Chip from './ui/Chip.jsx'
 import Segmented from './ui/Segmented.jsx'
 import VirtualList from './ui/VirtualList.jsx'
 import ExerciseDetail from './ExerciseDetail.jsx'
+import CustomExerciseEditor from './CustomExerciseEditor.jsx'
 
 const LEVELS = ['beginner', 'intermediate', 'expert']
 const MECHANICS = ['compound', 'isolation', 'unspecified']
@@ -39,7 +39,9 @@ function exerciseMajors(exercise) {
 
 export default function Library() {
   const { state, dispatch } = useStore()
+  const { list: exercises } = useExercises()
   const { equipmentProfiles, activeProfile } = state.settings
+  const equipmentList = useMemo(() => allEquipment(state.customExercises), [state.customExercises])
 
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounced(search, 150)
@@ -47,21 +49,27 @@ export default function Library() {
   const [selectedLevels, setSelectedLevels] = useState(() => new Set())
   const [selectedMechanics, setSelectedMechanics] = useState(() => new Set())
   const [selectedForces, setSelectedForces] = useState(() => new Set())
+  const [customOnly, setCustomOnly] = useState(false)
+  const [favoritesOnly, setFavoritesOnly] = useState(false)
+  const favoritesSet = useMemo(() => new Set(state.favorites), [state.favorites])
   const [selectedEquipment, setSelectedEquipment] = useState(
-    () => new Set(equipmentOptionsFor(equipmentProfiles, activeProfile)),
+    () => new Set(equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList)),
   )
   const [openExercise, setOpenExercise] = useState(null)
+  const [editorOpen, setEditorOpen] = useState(false)
 
   // Equipment chip set is pre-filtered by the active profile (section 9.1).
   // Switching profiles must not clear the other filter categories, so this
   // effect only re-derives the equipment selection.
   useEffect(() => {
-    setSelectedEquipment(new Set(equipmentOptionsFor(equipmentProfiles, activeProfile)))
-  }, [activeProfile, equipmentProfiles])
+    setSelectedEquipment(new Set(equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList)))
+  }, [activeProfile, equipmentProfiles, equipmentList])
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase()
     return exercises.filter((ex) => {
+      if (customOnly && !ex.custom) return false
+      if (favoritesOnly && !favoritesSet.has(ex.id)) return false
       if (q) {
         const nameMatch = ex.name.toLowerCase().includes(q)
         const muscleMatch = ex.primary.some((m) => m.toLowerCase().includes(q))
@@ -84,6 +92,10 @@ export default function Library() {
       return true
     })
   }, [
+    exercises,
+    customOnly,
+    favoritesOnly,
+    favoritesSet,
     debouncedSearch,
     selectedMajors,
     selectedEquipment,
@@ -123,6 +135,10 @@ export default function Library() {
             { value: 'all', label: 'All' },
           ]}
         />
+
+        <button type="button" onClick={() => setEditorOpen(true)}>
+          New exercise
+        </button>
       </div>
 
       <FilterRow title="Muscle group">
@@ -134,10 +150,12 @@ export default function Library() {
             onClick={() => setSelectedMajors((s) => toggle(s, m.id))}
           />
         ))}
+        <Chip label="Custom only" active={customOnly} onClick={() => setCustomOnly((c) => !c)} />
+        <Chip label="Favorites" active={favoritesOnly} onClick={() => setFavoritesOnly((f) => !f)} />
       </FilterRow>
 
       <FilterRow title="Equipment">
-        {equipmentOptionsFor(equipmentProfiles, activeProfile).map((eq) => (
+        {equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList).map((eq) => (
           <Chip
             key={eq}
             label={label(eq)}
@@ -200,6 +218,8 @@ export default function Library() {
               onOpen={() => setOpenExercise(exercise)}
               activeRoutine={activeRoutine}
               onAddToDay={(dayId) => addToDay(exercise.id, dayId)}
+              isFavorite={favoritesSet.has(exercise.id)}
+              onToggleFavorite={() => dispatch({ type: 'TOGGLE_FAVORITE', exerciseId: exercise.id })}
             />
           )}
         />
@@ -209,7 +229,9 @@ export default function Library() {
         exercise={openExercise}
         open={!!openExercise}
         onClose={() => setOpenExercise(null)}
+        onSelectExercise={setOpenExercise}
       />
+      <CustomExerciseEditor open={editorOpen} onClose={() => setEditorOpen(false)} />
     </div>
   )
 }
@@ -223,7 +245,7 @@ function FilterRow({ title, children }) {
   )
 }
 
-function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay }) {
+function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay, isFavorite, onToggleFavorite }) {
   const thumb = exercise.images[0] ? `${IMG_BASE}${exercise.images[0]}` : null
   const [imgFailed, setImgFailed] = useState(false)
 
@@ -245,11 +267,22 @@ function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay }) {
         <div className="sx-exercise-row-info">
           <span className="sx-exercise-name">{exercise.name}</span>
           <span className="sx-exercise-row-chips">
+            {exercise.custom && <span className="sx-chip sx-chip-static">Custom</span>}
             <span className="sx-chip sx-chip-static">{label(exercise.equipment)}</span>
             <span className="sx-chip sx-chip-static">{label(exercise.level)}</span>
             <span className="sx-exercise-muscle-summary">{muscleSummary(exercise.sub)}</span>
           </span>
         </div>
+      </button>
+
+      <button
+        type="button"
+        className="sx-favorite-star"
+        aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        aria-pressed={isFavorite}
+        onClick={onToggleFavorite}
+      >
+        {isFavorite ? '★' : '☆'}
       </button>
 
       <select

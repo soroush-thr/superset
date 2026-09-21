@@ -21,6 +21,8 @@
   --under: #4e7fa8; /* status: below target */
   --in: #4fa77e; /* status: in range */
   --over: #d8763c; /* status: above ceiling */
+  --series-1: #c9a24b; /* chart data series 1, e.g. est. 1RM */
+  --series-2: #8a7fd8; /* chart data series 2, e.g. top set weight / actual marker */
   --radius: 3px;
 
   /* 8.3 type scale, px */
@@ -591,6 +593,32 @@ button.sx-primary {
   max-width: 120px;
 }
 
+.sx-favorite-star {
+  flex-shrink: 0;
+  min-width: 40px;
+  padding: 0;
+  font-size: var(--fs-4);
+  color: var(--text-faint);
+}
+
+.sx-favorite-star[aria-pressed='true'] {
+  color: var(--series-1);
+}
+
+.sx-favorite-toggle {
+  margin-bottom: 12px;
+}
+
+.sx-favorite-toggle[aria-pressed='true'] {
+  color: var(--series-1);
+  border-color: var(--series-1);
+}
+
+.sx-entry-swap {
+  flex-shrink: 0;
+  max-width: 160px;
+}
+
 /* --------------------------------------------------------- 9.2 detail drawer */
 
 .sx-detail-images {
@@ -643,6 +671,20 @@ button.sx-primary {
   margin-bottom: 8px;
 }
 
+.sx-substitutes-list {
+  list-style: none;
+  margin: 8px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sx-substitutes-list button {
+  font-size: var(--fs-2);
+  min-height: 32px;
+}
+
 /* --------------------------------------------------------- 9.3 routine builder */
 
 .sx-routine-selector {
@@ -653,12 +695,44 @@ button.sx-primary {
   flex-wrap: wrap;
 }
 
+.sx-share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sx-share-fallback {
+  width: 320px;
+  max-width: 60vw;
+  height: 32px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
 .sx-cycle-days {
   display: flex;
   align-items: flex-end;
   gap: 16px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+}
+
+.sx-weeks-editor {
+  margin-bottom: 20px;
+}
+
+.sx-weeks-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.sx-week-item {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
 }
 
 .sx-helper-text {
@@ -690,11 +764,31 @@ button.sx-primary {
   font-size: var(--fs-4);
 }
 
+.sx-day-slots {
+  min-height: 8px;
+}
+
 .sx-slot {
+  position: relative;
   border: 1px solid var(--line-soft);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: 10px 28px 10px 10px;
   margin-bottom: 10px;
+  cursor: grab;
+}
+
+.sx-slot:active {
+  cursor: grabbing;
+}
+
+.sx-slot-drag-handle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: var(--text-faint);
+  font-size: var(--fs-3);
+  line-height: 1;
+  letter-spacing: -2px;
 }
 
 .sx-slot-paired {
@@ -809,6 +903,15 @@ button.sx-primary {
   pointer-events: none;
 }
 
+.sx-coverage-bar-marker {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: var(--series-2);
+  pointer-events: none;
+}
+
 .sx-gap-panel {
   margin-top: 20px;
 }
@@ -920,4 +1023,350 @@ button.sx-primary {
   padding: 6px 0;
   border-bottom: 1px solid var(--line-soft);
   max-width: 400px;
+}
+
+/* ------------------------------------------------------------------ 9.6 train */
+
+.sx-train-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 20px;
+  flex-wrap: wrap;
+}
+
+.sx-train-active-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.sx-train-active-badge::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sx-session-header {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.sx-session-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.sx-rest-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.sx-rest-timer-clock {
+  font-size: var(--fs-4);
+  color: var(--accent);
+}
+
+.sx-session-entry {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.sx-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sx-last-time {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+  color: var(--text-dim);
+}
+
+.sx-set-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sx-progression-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: var(--fs-2);
+  margin-bottom: 4px;
+}
+
+.sx-set-row {
+  display: grid;
+  grid-template-columns: 20px 1fr 1fr 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.sx-set-row-done {
+  opacity: 0.85;
+}
+
+.sx-set-index {
+  color: var(--text-faint);
+}
+
+.sx-set-weight,
+.sx-set-reps,
+.sx-set-rpe {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.sx-set-done {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-1);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.sx-session-history {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sx-session-history-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  min-height: auto;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sx-session-history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sx-session-detail-sets {
+  list-style: none;
+  margin: 4px 0 12px;
+  padding: 0;
+}
+
+.sx-session-detail-sets li {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+}
+
+.sx-session-detail-entry + .sx-session-detail-entry {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* --------------------------------------------------------------- charts */
+
+.sx-linechart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.sx-linechart-gridline {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+
+.sx-linechart-tick {
+  fill: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}
+
+.sx-linechart-line {
+  stroke-width: 2;
+}
+
+.sx-linechart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.sx-linechart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-2);
+  color: var(--text-dim);
+}
+
+.sx-linechart-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sx-pr-list {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.sx-pr-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sx-bodyweight-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.sx-bodyweight-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+.sx-bodyweight-form input:not([type='date']) {
+  max-width: 100px;
+}
+
+.sx-bodyweight-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+.sx-bodyweight-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.sx-bodyweight-list li span:first-child {
+  flex: 1;
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+}
+
+/* ------------------------------------------------------------------ print */
+/* A routine sheet: white background, no nav/body-map, no interactive chrome
+   (buttons -- steppers, reorder, add/remove, selects' surrounding controls).
+   Days and slots are already fully expanded in the DOM (no accordion), so
+   nothing needs to be un-collapsed for print. */
+
+@media print {
+  .sx-rail,
+  .sx-bottom-bar,
+  .sx-side,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .sx-content {
+    padding: 0;
+  }
+
+  .sx-day-card {
+    break-inside: avoid;
+    background: #fff;
+    border-color: #999;
+  }
+
+  .sx-slot {
+    border-color: #ccc;
+  }
+
+  .sx-input {
+    background: #fff;
+    border-color: #999;
+    color: #000;
+  }
+
+  .sx-eyebrow,
+  .sx-helper-text {
+    color: #333;
+  }
+}
+
+/* -------------------------------------------------------------- onboarding */
+
+.sx-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+
+.sx-onboarding-card {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sx-onboarding-card h2 {
+  font-size: var(--fs-5);
 }

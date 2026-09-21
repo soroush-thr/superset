@@ -2,8 +2,8 @@ import React, { useRef, useState } from 'react'
 import { useStore } from '../App.jsx'
 import { serialize, deserialize, targetsWithDefaults, flushSave } from '../lib/store.js'
 import { SUBGROUPS, MAJORS, subgroupName } from '../lib/taxonomy.js'
-import { ALL_EQUIPMENT } from '../lib/equipment.js'
-import exercisesData from '../data/exercises.json'
+import { allEquipment } from '../lib/equipment.js'
+import { BUILTIN_EXERCISES } from '../lib/exercises.js'
 import taxonomyData from '../data/taxonomy.json'
 import NumberField from './ui/NumberField.jsx'
 import Segmented from './ui/Segmented.jsx'
@@ -82,7 +82,8 @@ export default function Settings() {
   }
 
   const targets = targetsWithDefaults(state)
-  const reviewedCount = exercisesData.filter((e) => e.reviewed).length
+  const reviewedCount = BUILTIN_EXERCISES.filter((e) => e.reviewed).length
+  const equipmentList = allEquipment(state.customExercises)
 
   return (
     <div>
@@ -95,7 +96,7 @@ export default function Settings() {
             <div key={profileName} className="sx-equipment-profile">
               <span className="sx-eyebrow">{label(profileName)}</span>
               <div className="sx-checkbox-list">
-                {ALL_EQUIPMENT.map((eq) => (
+                {equipmentList.map((eq) => (
                   <label key={eq} className="sx-checkbox-item">
                     <input
                       type="checkbox"
@@ -126,6 +127,17 @@ export default function Settings() {
           options={[
             { value: 'peak', label: 'Peak' },
             { value: 'fraction', label: 'Fraction' },
+          ]}
+        />
+      </Section>
+
+      <Section title="Weight unit">
+        <Segmented
+          value={state.settings.unit ?? 'kg'}
+          onChange={(v) => dispatch({ type: 'UPDATE_SETTINGS', patch: { unit: v } })}
+          options={[
+            { value: 'kg', label: 'kg' },
+            { value: 'lb', label: 'lb' },
           ]}
         />
       </Section>
@@ -193,7 +205,7 @@ export default function Settings() {
           </li>
           <li>
             <span>Exercises</span>
-            <span className="sx-num">{exercisesData.length}</span>
+            <span className="sx-num">{BUILTIN_EXERCISES.length}</span>
           </li>
           <li>
             <span>Taxonomy version</span>
@@ -202,7 +214,7 @@ export default function Settings() {
           <li>
             <span>Reviewed / auto-mapped</span>
             <span className="sx-num">
-              {reviewedCount} / {exercisesData.length - reviewedCount}
+              {reviewedCount} / {BUILTIN_EXERCISES.length - reviewedCount}
             </span>
           </li>
         </ul>

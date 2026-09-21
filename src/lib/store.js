@@ -4,7 +4,8 @@
 // the entire persistence surface. A future sync adapter (section 13, item 3)
 // swaps only these four; nothing else in the app should touch localStorage
 // directly.
-import { DEFAULT_TARGETS } from './constants.js'
+import { DEFAULT_TARGETS, SET_TYPES } from './constants.js'
+import { TEMPLATES_BY_ID } from './templates.js'
 
 export const STORAGE_KEY = 'superset.v1'
 const PERSIST_DEBOUNCE_MS = 300
@@ -33,10 +34,17 @@ function emptyState() {
       activeProfile: 'gym',
       maxLevel: 'expert',
       creditMode: 'peak',
+      unit: 'kg', // 'kg' | 'lb', display only -- weights are always stored in kg
       targets: {}, // only user overrides live here; defaults are seeded at read time (5.2)
     },
     routines: [],
     activeRoutineId: null,
+    sessions: [],
+    activeSessionId: null,
+    customExercises: [],
+    favorites: [],
+    bodyLog: [],
+    onboardingComplete: false,
   }
 }
 
@@ -46,19 +54,38 @@ export function targetsWithDefaults(state) {
   return { ...DEFAULT_TARGETS, ...state.settings.targets }
 }
 
+/** A routine's optional deload cycle: [1, 1, 1, 0.5] means "weeks 1-3 run
+ *  the plan at full volume, week 4 at half". Absent or empty defaults to a
+ *  single full-volume week, so every routine created before this feature
+ *  shipped is unaffected. */
+export function weeksWithDefault(routine) {
+  return routine.weeks && routine.weeks.length > 0 ? routine.weeks : [1]
+}
+
 /** JSON-serialize state for export, section 5.4. Adds exportedAt. */
 export function serialize(state) {
   return JSON.stringify({ ...state, exportedAt: new Date().toISOString() })
 }
 
 /** Parse and validate a serialized state string. Throws on invalid JSON or
- *  an unsupported version; callers decide how to handle that. */
+ *  an unsupported version; callers decide how to handle that. Fills in keys
+ *  added after v1 shipped (read-time defaulting, same idea as
+ *  targetsWithDefaults) so an older export still loads cleanly without a
+ *  real schema migration. */
 export function deserialize(text) {
   const parsed = JSON.parse(text)
   if (parsed.version !== 1) {
     throw new Error(`Unsupported state version: ${parsed.version}`)
   }
-  return parsed
+  return {
+    ...parsed,
+    sessions: parsed.sessions ?? [],
+    activeSessionId: parsed.activeSessionId ?? null,
+    customExercises: parsed.customExercises ?? [],
+    favorites: parsed.favorites ?? [],
+    bodyLog: parsed.bodyLog ?? [],
+    onboardingComplete: parsed.onboardingComplete ?? false,
+  }
 }
 
 /** Section 5.2: read from localStorage. Never throws — on parse failure,
@@ -116,7 +143,7 @@ export function flushSave(state) {
 
 // --------------------------------------------------------------- reducer
 
-function uid(prefix) {
+export function uid(prefix) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
 }
 
@@ -157,6 +184,145 @@ function findRoutine(state, routineId) {
   return state.routines.find((r) => r.id === routineId)
 }
 
+// Custom exercises clone an existing exercise's `sub` weight vector rather
+// than being built from scratch, so they stay on the same scale as the
+// curated built-in data (see coverage.js -- everything downstream of `sub`
+// assumes it came from the same weighting convention).
+function newCustomExercise({
+  baseId = null,
+  name,
+  sub,
+  equipment = 'body only',
+  level = 'intermediate',
+  mechanic = 'compound',
+  force = 'push',
+}) {
+  return {
+    id: uid('x'),
+    name,
+    level,
+    equipment,
+    mechanic,
+    force,
+    category: 'strength',
+    primary: [],
+    secondary: [],
+    steps: [],
+    images: [],
+    sub,
+    conf: 'user',
+    reviewed: true,
+    custom: true,
+    baseId,
+    deleted: false,
+  }
+}
+
+function instantiateTemplateDay(day) {
+  return {
+    id: uid('d'),
+    name: day.name,
+    note: '',
+    slots: day.exercises.map((ex) => ({
+      id: uid('s'),
+      type: 'single',
+      entries: [
+        {
+          exerciseId: ex.exerciseId,
+          sets: ex.sets,
+          repMin: ex.repMin,
+          repMax: ex.repMax,
+          restSec: ex.restSec,
+          rpe: null,
+          tempo: '',
+          setType: 'normal',
+          note: '',
+        },
+      ],
+    })),
+  }
+}
+
+// A shared routine arrives as arbitrary JSON decoded from a URL someone
+// else sent -- never spread it into state directly. Rebuild it field by
+// field from only the keys the app understands, with sane fallbacks for
+// anything missing or malformed, and fresh ids at every level (the same fix
+// DUPLICATE_ROUTINE needed).
+function sanitizeSharedEntry(e) {
+  if (!e || typeof e.exerciseId !== 'string') return null
+  return {
+    exerciseId: e.exerciseId,
+    sets: Number.isFinite(e.sets) ? e.sets : 3,
+    repMin: Number.isFinite(e.repMin) ? e.repMin : 8,
+    repMax: Number.isFinite(e.repMax) ? e.repMax : 12,
+    restSec: Number.isFinite(e.restSec) ? e.restSec : 90,
+    rpe: Number.isFinite(e.rpe) ? e.rpe : null,
+    tempo: typeof e.tempo === 'string' ? e.tempo : '',
+    setType: SET_TYPES.includes(e.setType) ? e.setType : 'normal',
+    note: typeof e.note === 'string' ? e.note : '',
+  }
+}
+
+function sanitizeSharedRoutine(raw) {
+  if (!raw || typeof raw.name !== 'string' || !Array.isArray(raw.days)) return null
+  return {
+    id: uid('r'),
+    name: raw.name.slice(0, 200),
+    cycleDays: Number.isFinite(raw.cycleDays) && raw.cycleDays > 0 ? raw.cycleDays : 7,
+    days: raw.days.map((d) => ({
+      id: uid('d'),
+      name: typeof d?.name === 'string' ? d.name.slice(0, 200) : 'Day',
+      note: typeof d?.note === 'string' ? d.note : '',
+      slots: (Array.isArray(d?.slots) ? d.slots : [])
+        .map((s) => {
+          const entries = (Array.isArray(s?.entries) ? s.entries : [])
+            .map(sanitizeSharedEntry)
+            .filter(Boolean)
+          if (entries.length === 0) return null
+          return { id: uid('s'), type: s.type === 'paired' ? 'paired' : 'single', entries }
+        })
+        .filter(Boolean),
+    })),
+  }
+}
+
+// A session's entries snapshot their planned targets at start time (not a
+// reference to the plan entry) so editing or deleting the routine later
+// never rewrites or orphans a logged session.
+function newSessionEntry(exerciseId, target = {}) {
+  return {
+    id: uid('sen'),
+    exerciseId,
+    targetSets: target.sets ?? null,
+    targetRepMin: target.repMin ?? null,
+    targetRepMax: target.repMax ?? null,
+    targetRestSec: target.restSec ?? null,
+    sets: [],
+  }
+}
+
+function newLoggedSet({ weightKg = null, reps = null, rpe = null, setType = 'normal', done = true } = {}) {
+  return { id: uid('set'), weightKg, reps, rpe, setType, done, ts: new Date().toISOString() }
+}
+
+function newSession({ routineId = null, dayId = null, dayName = '', entries = [] } = {}) {
+  return {
+    id: uid('ses'),
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    routineId,
+    dayId,
+    dayName,
+    note: '',
+    restEndsAt: null,
+    entries,
+  }
+}
+
+function newBodyLogEntry({ date, weightKg, note = '' }) {
+  return { id: uid('bw'), date, weightKg, note }
+}
+
 export function reducer(state, action) {
   switch (action.type) {
     case 'REPLACE_STATE':
@@ -182,8 +348,42 @@ export function reducer(state, action) {
     case 'DUPLICATE_ROUTINE': {
       const src = findRoutine(state, action.routineId)
       if (!src) return state
-      const copy = { ...structuredClone(src), id: uid('r'), name: `${src.name} copy` }
+      // Fresh ids at every level -- a naive structuredClone(src) copies the
+      // day and slot ids verbatim, which collide with the original routine.
+      const copy = {
+        id: uid('r'),
+        name: `${src.name} copy`,
+        cycleDays: src.cycleDays,
+        days: src.days.map((d) => ({
+          id: uid('d'),
+          name: d.name,
+          note: d.note,
+          slots: d.slots.map((s) => ({
+            id: uid('s'),
+            type: s.type,
+            entries: s.entries.map((e) => ({ ...e })),
+          })),
+        })),
+      }
       return { ...state, routines: [...state.routines, copy], activeRoutineId: copy.id }
+    }
+
+    case 'INSTANTIATE_TEMPLATE': {
+      const template = TEMPLATES_BY_ID[action.templateId]
+      if (!template) return state
+      const routine = {
+        id: uid('r'),
+        name: template.name,
+        cycleDays: template.cycleDays,
+        days: template.days.map(instantiateTemplateDay),
+      }
+      return { ...state, routines: [...state.routines, routine], activeRoutineId: routine.id }
+    }
+
+    case 'IMPORT_SHARED_ROUTINE': {
+      const routine = sanitizeSharedRoutine(action.routine)
+      if (!routine) return state
+      return { ...state, routines: [...state.routines, routine], activeRoutineId: routine.id }
     }
 
     case 'DELETE_ROUTINE': {
@@ -203,6 +403,14 @@ export function reducer(state, action) {
         ...state,
         routines: state.routines.map((r) =>
           r.id === action.routineId ? { ...r, cycleDays: action.cycleDays } : r,
+        ),
+      }
+
+    case 'SET_ROUTINE_WEEKS':
+      return {
+        ...state,
+        routines: state.routines.map((r) =>
+          r.id === action.routineId ? { ...r, weeks: action.weeks } : r,
         ),
       }
 
@@ -309,6 +517,53 @@ export function reducer(state, action) {
         }),
       }
 
+    // Drag-and-drop reordering (section 4.3), layered on top of the
+    // existing up/down day buttons rather than replacing them -- those were
+    // a deliberate touch-reliability choice (BUILD-PLAN.md).
+    case 'REORDER_SLOT':
+      return {
+        ...state,
+        routines: state.routines.map((r) => {
+          if (r.id !== action.routineId) return r
+          return {
+            ...r,
+            days: r.days.map((d) => {
+              if (d.id !== action.dayId) return d
+              const slots = [...d.slots]
+              const [moved] = slots.splice(action.fromIndex, 1)
+              if (!moved) return d
+              slots.splice(action.toIndex, 0, moved)
+              return { ...d, slots }
+            }),
+          }
+        }),
+      }
+
+    case 'MOVE_SLOT':
+      return {
+        ...state,
+        routines: state.routines.map((r) => {
+          if (r.id !== action.routineId) return r
+          const fromDay = r.days.find((d) => d.id === action.fromDayId)
+          const slot = fromDay?.slots.find((s) => s.id === action.slotId)
+          if (!slot) return r
+          return {
+            ...r,
+            days: r.days.map((d) => {
+              if (d.id === action.fromDayId) {
+                return { ...d, slots: d.slots.filter((s) => s.id !== action.slotId) }
+              }
+              if (d.id === action.toDayId) {
+                const slots = [...d.slots]
+                slots.splice(Math.min(action.toIndex, slots.length), 0, slot)
+                return { ...d, slots }
+              }
+              return d
+            }),
+          }
+        }),
+      }
+
     // "Make superset" / "Split" -- section 1a rule 1: stored type is
     // paired, never the product name. UI label stays Superset (rule 2).
     case 'MERGE_SLOTS_AS_PAIRED':
@@ -375,6 +630,178 @@ export function reducer(state, action) {
     case 'RESET_SETTINGS':
       return { ...state, settings: emptyState().settings }
 
+    // Sessions -- logged workouts. Routine-driven ("START_SESSION" with a
+    // routineId+dayId snapshots that day's entries) or ad-hoc (both null,
+    // entries added one at a time via ADD_SESSION_ENTRY).
+    case 'START_SESSION': {
+      const { routineId, dayId } = action
+      let entries = []
+      let dayName = ''
+      if (routineId && dayId) {
+        const day = findRoutine(state, routineId)?.days.find((d) => d.id === dayId)
+        if (day) {
+          dayName = day.name
+          entries = day.slots.flatMap((slot) =>
+            slot.entries.map((e) =>
+              newSessionEntry(e.exerciseId, {
+                sets: e.sets,
+                repMin: e.repMin,
+                repMax: e.repMax,
+                restSec: e.restSec,
+              }),
+            ),
+          )
+        }
+      }
+      const session = newSession({ routineId: routineId ?? null, dayId: dayId ?? null, dayName, entries })
+      return { ...state, sessions: [...state.sessions, session], activeSessionId: session.id }
+    }
+
+    case 'ADD_SESSION_ENTRY':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) =>
+          s.id === action.sessionId
+            ? { ...s, entries: [...s.entries, newSessionEntry(action.exerciseId)] }
+            : s,
+        ),
+      }
+
+    case 'DELETE_SESSION_ENTRY':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) =>
+          s.id === action.sessionId
+            ? { ...s, entries: s.entries.filter((e) => e.id !== action.entryId) }
+            : s,
+        ),
+      }
+
+    case 'LOG_SET':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) => {
+          if (s.id !== action.sessionId) return s
+          return {
+            ...s,
+            entries: s.entries.map((e) =>
+              e.id === action.entryId
+                ? { ...e, sets: [...e.sets, newLoggedSet(action.set)] }
+                : e,
+            ),
+          }
+        }),
+      }
+
+    case 'UPDATE_SET':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) => {
+          if (s.id !== action.sessionId) return s
+          return {
+            ...s,
+            entries: s.entries.map((e) => {
+              if (e.id !== action.entryId) return e
+              return {
+                ...e,
+                sets: e.sets.map((set) => (set.id === action.setId ? { ...set, ...action.patch } : set)),
+              }
+            }),
+          }
+        }),
+      }
+
+    case 'DELETE_SET':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) => {
+          if (s.id !== action.sessionId) return s
+          return {
+            ...s,
+            entries: s.entries.map((e) =>
+              e.id === action.entryId
+                ? { ...e, sets: e.sets.filter((set) => set.id !== action.setId) }
+                : e,
+            ),
+          }
+        }),
+      }
+
+    case 'END_SESSION':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) =>
+          s.id === action.sessionId ? { ...s, endedAt: new Date().toISOString(), restEndsAt: null } : s,
+        ),
+        activeSessionId: state.activeSessionId === action.sessionId ? null : state.activeSessionId,
+      }
+
+    case 'DISCARD_SESSION':
+      return {
+        ...state,
+        sessions: state.sessions.filter((s) => s.id !== action.sessionId),
+        activeSessionId: state.activeSessionId === action.sessionId ? null : state.activeSessionId,
+      }
+
+    case 'UPDATE_SESSION':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) => (s.id === action.sessionId ? { ...s, ...action.patch } : s)),
+      }
+
+    case 'SET_REST_TIMER':
+      return {
+        ...state,
+        sessions: state.sessions.map((s) =>
+          s.id === action.sessionId ? { ...s, restEndsAt: action.restEndsAt } : s,
+        ),
+      }
+
+    // Custom exercises clone an existing exercise's sub weights (App.jsx's
+    // useExercises merges these into the same index the built-in dataset
+    // uses). DELETE is a soft delete -- a tombstone, not a removal -- so a
+    // routine or logged session that already references it still resolves
+    // a name instead of breaking.
+    case 'ADD_CUSTOM_EXERCISE': {
+      const exercise = newCustomExercise(action)
+      return { ...state, customExercises: [...state.customExercises, exercise] }
+    }
+
+    case 'UPDATE_CUSTOM_EXERCISE':
+      return {
+        ...state,
+        customExercises: state.customExercises.map((e) =>
+          e.id === action.exerciseId ? { ...e, ...action.patch } : e,
+        ),
+      }
+
+    case 'DELETE_CUSTOM_EXERCISE':
+      return {
+        ...state,
+        customExercises: state.customExercises.map((e) =>
+          e.id === action.exerciseId ? { ...e, deleted: true } : e,
+        ),
+      }
+
+    case 'TOGGLE_FAVORITE': {
+      const has = state.favorites.includes(action.exerciseId)
+      return {
+        ...state,
+        favorites: has
+          ? state.favorites.filter((id) => id !== action.exerciseId)
+          : [...state.favorites, action.exerciseId],
+      }
+    }
+
+    case 'ADD_BODY_LOG':
+      return { ...state, bodyLog: [...state.bodyLog, newBodyLogEntry(action)] }
+
+    case 'DELETE_BODY_LOG':
+      return { ...state, bodyLog: state.bodyLog.filter((b) => b.id !== action.id) }
+
+    case 'COMPLETE_ONBOARDING':
+      return { ...state, onboardingComplete: true }
+
     default:
       return state
   }
@@ -382,4 +809,92 @@ export function reducer(state, action) {
 
 export function initState() {
   return loadState()
+}
+
+// ------------------------------------------------------------ undo / redo
+
+// Only routine-editing actions are undoable. Logging a set, adding a
+// custom exercise, toggling a favorite, or changing settings must never be
+// rewound by Ctrl/Cmd+Z -- those are facts or preferences, not edits to
+// take back.
+const UNDOABLE_ACTION_TYPES = new Set([
+  'CREATE_ROUTINE',
+  'RENAME_ROUTINE',
+  'DUPLICATE_ROUTINE',
+  'DELETE_ROUTINE',
+  'INSTANTIATE_TEMPLATE',
+  'IMPORT_SHARED_ROUTINE',
+  'SET_CYCLE_DAYS',
+  'SET_ROUTINE_WEEKS',
+  'ADD_DAY',
+  'REORDER_DAY',
+  'UPDATE_DAY',
+  'DELETE_DAY',
+  'ADD_SLOT',
+  'UPDATE_ENTRY',
+  'DELETE_SLOT',
+  'REORDER_SLOT',
+  'MOVE_SLOT',
+  'MERGE_SLOTS_AS_PAIRED',
+  'SPLIT_PAIRED_SLOT',
+])
+
+const HISTORY_LIMIT = 50
+
+function routineSnapshot(state) {
+  return { routines: state.routines, activeRoutineId: state.activeRoutineId }
+}
+
+/**
+ * Wraps `reducer` with undo/redo over the routines slice only -- past/future
+ * hold { routines, activeRoutineId } snapshots, never the full state. That
+ * scoping is what makes it safe: a set logged (or a custom exercise added,
+ * or a setting changed) between two routine edits lives in `present` and is
+ * never written into a snapshot, so undoing a routine edit can't discard it.
+ * `{ past, present, future }` is the reducer's state shape; callers persist
+ * `present` only (see App.jsx's StoreProvider) -- the stacks are memory-only.
+ */
+export function historyReducer(historyState, action) {
+  const { past, present, future } = historyState
+
+  if (action.type === 'UNDO') {
+    if (past.length === 0) return historyState
+    const previous = past[past.length - 1]
+    return {
+      past: past.slice(0, -1),
+      present: { ...present, ...previous },
+      future: [routineSnapshot(present), ...future],
+    }
+  }
+
+  if (action.type === 'REDO') {
+    if (future.length === 0) return historyState
+    const next = future[0]
+    return {
+      past: [...past, routineSnapshot(present)],
+      present: { ...present, ...next },
+      future: future.slice(1),
+    }
+  }
+
+  const nextPresent = reducer(present, action)
+  if (nextPresent === present) return historyState
+
+  if (action.type === 'REPLACE_STATE') {
+    return { past: [], present: nextPresent, future: [] }
+  }
+
+  if (!UNDOABLE_ACTION_TYPES.has(action.type)) {
+    return { ...historyState, present: nextPresent }
+  }
+
+  return {
+    past: [...past, routineSnapshot(present)].slice(-HISTORY_LIMIT),
+    present: nextPresent,
+    future: [],
+  }
+}
+
+export function initHistoryState() {
+  return { past: [], present: initState(), future: [] }
 }

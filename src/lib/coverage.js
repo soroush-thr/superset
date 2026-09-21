@@ -44,28 +44,37 @@ export function creditForEntry(entry, exercise, mode = 'peak') {
 }
 
 /**
+ * Sum credit(g) * factor over a flat list of entries ({ exerciseId, sets }).
+ * Returns { subgroupId: number }. Never rounds internally — round only for
+ * display. `factor` defaults to 1 (raw, unscaled) so this also works for
+ * logged session sets, not just routine entries.
+ */
+export function volumeForEntries(entries, exercisesById, mode = 'peak', factor = 1) {
+  const totals = {}
+  for (const entry of entries) {
+    const exercise = exercisesById[entry.exerciseId]
+    if (!exercise) continue
+    const credit = creditForEntry(entry, exercise, mode)
+    for (const [g, c] of Object.entries(credit)) {
+      totals[g] = (totals[g] || 0) + c * factor
+    }
+  }
+  return totals
+}
+
+/**
  * Section 6.3: sum credit(g) * weeklyFactor over every entry in every slot
  * in every day of the routine. Returns { subgroupId: number }. Never rounds
  * internally — round only for display.
  */
 export function weeklyVolume(routine, exercisesById, mode = 'peak') {
-  const totals = {}
-  const factor = weeklyFactor(routine)
-
+  const entries = []
   for (const day of routine.days) {
     for (const slot of day.slots) {
-      for (const entry of slot.entries) {
-        const exercise = exercisesById[entry.exerciseId]
-        if (!exercise) continue
-        const credit = creditForEntry(entry, exercise, mode)
-        for (const [g, c] of Object.entries(credit)) {
-          totals[g] = (totals[g] || 0) + c * factor
-        }
-      }
+      for (const entry of slot.entries) entries.push(entry)
     }
   }
-
-  return totals
+  return volumeForEntries(entries, exercisesById, mode, weeklyFactor(routine))
 }
 
 /**
@@ -180,4 +189,57 @@ export function suggestExercises({
     result[subgroupId] = scored.slice(0, 5)
   }
   return result
+}
+
+function cosineSimilarity(a, b) {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+  let dot = 0
+  let normA = 0
+  let normB = 0
+  for (const k of keys) {
+    const av = a[k] || 0
+    const bv = b[k] || 0
+    dot += av * bv
+    normA += av * av
+    normB += bv * bv
+  }
+  if (normA === 0 || normB === 0) return 0
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+/**
+ * Rank candidate exercises as substitutes for `exerciseId` by cosine
+ * similarity of their `sub` weight vectors -- how similarly they distribute
+ * load across the same sub-groups, not just which majors they share.
+ * Filtered to the active equipment profile and maxLevel, same gate as
+ * suggestExercises. `index` is the { list, byId } shape from
+ * buildExerciseIndex, so custom exercises are eligible candidates too.
+ */
+export function substitutesFor(exerciseId, { index, equipmentProfile, maxLevel, n = 5 }) {
+  const source = index.byId[exerciseId]
+  if (!source?.sub) return []
+
+  const maxLevelRank = LEVEL_ORDER[maxLevel] ?? LEVEL_ORDER.expert
+  const equipmentSet = new Set(equipmentProfile)
+
+  const scored = []
+  for (const candidate of index.list) {
+    if (candidate.id === exerciseId || !candidate.sub) continue
+    if (!equipmentSet.has(candidate.equipment)) continue
+    const levelRank = LEVEL_ORDER[candidate.level] ?? LEVEL_ORDER.expert
+    if (levelRank > maxLevelRank) continue
+    const score = cosineSimilarity(source.sub, candidate.sub)
+    if (score <= 0) continue
+    scored.push({ exercise: candidate, score })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  return scored.slice(0, n)
+}
+
+/** Scale a { subgroupId: number } volume map by a flat factor -- used to
+ *  preview a deload week (routine.weeks) without changing weeklyVolume's
+ *  signature. factor 1 is a no-op (returns the same object, not a copy). */
+export function scaleVolume(volume, factor) {
+  if (factor === 1) return volume
+  return Object.fromEntries(Object.entries(volume).map(([g, v]) => [g, v * factor]))
 }

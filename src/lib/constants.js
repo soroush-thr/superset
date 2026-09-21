@@ -69,3 +69,7 @@ export const HEAT_RAMP = [
 ]
 
 export const SECONDARY_MUSCLE_DISCOUNT = 0.5
+
+// Shared with the reducer (store.js sanitizes incoming shared-routine data
+// against this list) and the routine builder's set-type <select>.
+export const SET_TYPES = ['normal', 'dropset', 'myo', 'amrap', 'cluster', 'tut', 'isometric']
