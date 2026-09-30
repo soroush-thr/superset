@@ -16,6 +16,8 @@ import {
 import Chip from '../ui/Chip.jsx'
 import Segmented from '../ui/Segmented.jsx'
 import NumberField from '../ui/NumberField.jsx'
+import ExerciseThumb from '../ui/ExerciseThumb.jsx'
+import ExerciseDetail from '../ExerciseDetail.jsx'
 
 const TYPE_OPTIONS = [
   { value: 'full', label: 'Full body' },
@@ -55,6 +57,7 @@ export default function Generate({ onStarted }) {
   const [fineTune, setFineTune] = useState(false)
   const [saveTarget, setSaveTarget] = useState('')
   const [saved, setSaved] = useState(false)
+  const [detailId, setDetailId] = useState(null)
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
 
@@ -248,6 +251,7 @@ export default function Generate({ onStarted }) {
           volume={volume}
           bodyKg={latestBodyKg(state.bodyLog)}
           byId={byId}
+          onOpenDetail={setDetailId}
           ctx={ctx}
           onSwap={(i) => {
             setSaved(false)
@@ -269,6 +273,13 @@ export default function Generate({ onStarted }) {
           }}
         />
       )}
+
+      <ExerciseDetail
+        exercise={detailId ? byId[detailId] : null}
+        open={!!detailId}
+        onClose={() => setDetailId(null)}
+        onSelectExercise={(ex) => setDetailId(ex.id)}
+      />
     </div>
   )
 }
@@ -278,6 +289,7 @@ function Preview({
   volume,
   bodyKg,
   byId,
+  onOpenDetail,
   onSwap,
   onReroll,
   canStart,
@@ -338,20 +350,23 @@ function Preview({
         const label = partners.length ? `${it.pairId}${partners.indexOf(it) + 1}` : null
         return (
           <div key={it.exerciseId} className={`sx-entry${label ? ' sx-superset' : ''}`}>
-            <div className="sx-entry-header">
-              <span className="sx-entry-name">
-                {label && <span className="sx-superset-tag">{label}</span>}
-                {ex?.name ?? it.exerciseId}
-              </span>
+            <div className="sx-entry-top">
+              <ExerciseThumb exercise={ex} size="md" onClick={() => onOpenDetail(it.exerciseId)} />
+              <div className="sx-entry-info">
+                <span className="sx-entry-name">
+                  {label && <span className="sx-superset-tag">{label}</span>}
+                  {ex?.name ?? it.exerciseId}
+                </span>
+                <span className="sx-entry-meta sx-num">
+                  {it.sets} × {it.repMin}-{it.repMax} {it.unit === 'sec' ? 'sec' : 'reps'} · rest {it.restSec}s
+                  {ex ? ` · ${ex.equipment}` : ''}
+                </span>
+                {ex && <span className="sx-entry-meta">{muscleSummary(ex.sub, 3)}</span>}
+              </div>
               <button type="button" onClick={() => onSwap(i)}>
                 Swap
               </button>
             </div>
-            <p className="sx-helper-text sx-num">
-              {it.sets} × {it.repMin}-{it.repMax} {it.unit === 'sec' ? 'sec' : 'reps'} · rest {it.restSec}s
-              {ex ? ` · ${ex.equipment}` : ''}
-            </p>
-            {ex && <p className="sx-helper-text">{muscleSummary(ex.sub, 3)}</p>}
           </div>
         )
       })}

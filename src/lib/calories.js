@@ -1,15 +1,15 @@
 // Rough calorie estimates for resistance training. Pure functions.
 //
-// Energy = MET x body weight (kg) x hours, using Compendium-of-Physical-
-// Activities style values: lifting sets run at about 5-7 MET (more for
-// big compound lifts), resting between sets about 2 MET. The result is an
+// Energy = MET x body weight (kg) x hours, with one MET value for the whole
+// session (lifting plus the rests between sets, as the Compendium of Physical
+// Activities does: about 3.5 for light effort up to 6 for vigorous). Here the
+// MET runs from about 3.8 (all isolation work) to 5.5 (all compound lifts),
+// scaled by how densely the sets are packed into the time. The result is an
 // estimate, good to maybe +/-25% -- real burn depends on load, pace, and
 // the individual.
 
 export const DEFAULT_BODY_KG = 75
 
-const WORK_SEC_PER_SET = 40
-const REST_MET = 2.0
 const WARMUP_MET = 4.0
 const COOLDOWN_MET = 2.3
 const WARMUP_SEC = 300
@@ -21,9 +21,11 @@ export function latestBodyKg(bodyLog = []) {
   return [...bodyLog].sort((a, b) => a.date.localeCompare(b.date))[bodyLog.length - 1].weightKg
 }
 
-function kcal(bodyKg, workSec, restSec, compoundShare) {
-  const workMet = 5 + 2 * compoundShare // 5 MET isolation-only .. 7 MET all compound
-  return (bodyKg * (workMet * workSec + REST_MET * restSec)) / 3600
+function sessionMet(sets, durationSec, compoundShare) {
+  const base = 3.8 + 1.7 * compoundShare
+  const setsPer10Min = sets / Math.max(durationSec / 600, 0.5)
+  const density = Math.min(1.15, Math.max(0.8, setsPer10Min / 3)) // 3 sets per 10 min is a normal pace
+  return base * density
 }
 
 /**
@@ -35,8 +37,7 @@ export function plannedKcal(items, totalSec, bodyKg, { warmup = false } = {}) {
   const sets = items.reduce((s, it) => s + it.sets, 0)
   if (sets === 0) return 0
   const compoundSets = items.reduce((s, it) => s + (it.compound ? it.sets : 0), 0)
-  const workSec = Math.min(sets * WORK_SEC_PER_SET, totalSec)
-  let total = kcal(bodyKg, workSec, Math.max(0, totalSec - workSec), compoundSets / sets)
+  let total = (bodyKg * sessionMet(sets, totalSec, compoundSets / sets) * totalSec) / 3600
   if (warmup) total += (bodyKg * (WARMUP_MET * WARMUP_SEC + COOLDOWN_MET * COOLDOWN_SEC)) / 3600
   return Math.round(total)
 }
@@ -58,7 +59,6 @@ export function sessionKcal(session, exercisesById, bodyKg, now = Date.now()) {
   if (sets === 0) return null
   const end = session.endedAt ? new Date(session.endedAt).getTime() : now
   const rawSec = Math.max(0, (end - new Date(session.startedAt).getTime()) / 1000)
-  const durationSec = Math.min(rawSec, sets * 300 + 600)
-  const workSec = Math.min(sets * WORK_SEC_PER_SET, durationSec)
-  return Math.round(kcal(bodyKg, workSec, durationSec - workSec, compoundSets / sets))
+  const durationSec = Math.min(rawSec, sets * 360 + 600)
+  return Math.round((bodyKg * sessionMet(sets, durationSec, compoundSets / sets) * durationSec) / 3600)
 }

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import ExerciseThumb from './ui/ExerciseThumb.jsx'
 import { useStore, useBodyMapFeed, useExercises } from '../App.jsx'
 import { weeklyVolume, substitutesFor } from '../lib/coverage.js'
 import { useDebounced } from '../lib/hooks.js'
@@ -539,7 +540,8 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, dispatch, exercise
   return (
     <div className="sx-entry">
       <div className="sx-entry-header">
-        <span className="sx-entry-name">{exercise?.name ?? entry.exerciseId}</span>
+        <ExerciseThumb exercise={exercise} size="sm" />
+        <span className="sx-entry-name sx-entry-name-grow">{exercise?.name ?? entry.exerciseId}</span>
         {substitutes.length > 0 && (
           <select
             className="sx-input sx-entry-swap"

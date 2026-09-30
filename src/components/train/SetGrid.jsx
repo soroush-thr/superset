@@ -1,40 +1,54 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { toDisplay, fromDisplay, formatWeight } from '../../lib/units.js'
 import { suggestNextLoad } from '../../lib/progression.js'
 
-function lastSetDefaults(entry) {
-  const last = entry.sets[entry.sets.length - 1]
-  return last ? { weightKg: last.weightKg, reps: last.reps, rpe: last.rpe, setType: last.setType } : {}
-}
-
 /**
- * One entry's logged sets: a row per set (weight/reps/RPE/done), plus a
- * "Log set" button that appends a new one prefilled from the last set so
- * repeating the same weight across sets is a single tap. Plain numeric
- * inputs, not NumberField -- +/- steppers are the wrong control for typing
- * a gym weight. `previousSession` (the { session, entry, sets } shape from
- * lastSessionFor) drives the dismissible "bump the weight" hint.
+ * One entry's sets as a compact checklist: a row per planned set with
+ * weight, reps and a big tick. Ticking a set fills any blank weight/reps
+ * from the previous set (or last session, or the target), copies the weight
+ * to the rows below, and starts the rest timer. Planned entries have a fixed
+ * number of rows; ad-hoc entries can add more. `previousSession` (the
+ * { session, entry, sets } shape from lastSessionFor) drives the dismissible
+ * "bump the weight" hint.
  */
 export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged, previousSession }) {
   const [hintDismissed, setHintDismissed] = useState(false)
-  // A planned entry has a fixed number of sets; ad-hoc entries are open-ended.
-  const setsFull = entry.targetSets != null && entry.sets.length >= entry.targetSets
   const suggestion = hintDismissed ? null : suggestNextLoad(previousSession, entry.targetRepMax, unit)
+  // A planned entry has a fixed number of sets; ad-hoc entries are open-ended.
+  const canAdd = entry.targetSets == null || entry.sets.length < entry.targetSets
+  const repsLabel = entry.targetUnit === 'sec' ? 'sec' : 'reps'
+  const repsPlaceholder =
+    entry.targetRepMin != null && entry.targetRepMax != null
+      ? entry.targetRepMin === entry.targetRepMax
+        ? String(entry.targetRepMin)
+        : `${entry.targetRepMin}-${entry.targetRepMax}`
+      : repsLabel
+
+  const update = (setId, patch) => dispatch({ type: 'UPDATE_SET', sessionId, entryId: entry.id, setId, patch })
+
+  function toggleDone(set, index) {
+    if (set.done) {
+      update(set.id, { done: false })
+      return
+    }
+    const prev = [...entry.sets.slice(0, index)].reverse().find((s) => s.done)
+    const fromLast = previousSession?.sets[index] ?? previousSession?.sets[previousSession.sets.length - 1]
+    const weightKg = set.weightKg ?? prev?.weightKg ?? fromLast?.weightKg ?? null
+    const reps = set.reps ?? prev?.reps ?? fromLast?.reps ?? entry.targetRepMax ?? null
+    update(set.id, { done: true, weightKg, reps, ts: new Date().toISOString() })
+    if (weightKg != null) {
+      for (const later of entry.sets.slice(index + 1)) {
+        if (!later.done && later.weightKg == null) update(later.id, { weightKg })
+      }
+    }
+    onSetLogged?.()
+  }
 
   return (
     <div className="sx-set-grid">
-      {entry.kind === 'cooldown' ? (
-        <p className="sx-helper-text">{entry.note}</p>
-      ) : (entry.targetSets || entry.targetRepMin != null || entry.targetRepMax != null) && (
-        <p className="sx-helper-text">
-          Target: {entry.targetSets ?? '-'} sets of {entry.targetRepMin ?? '-'}-{entry.targetRepMax ?? '-'}{' '}
-          {entry.targetUnit === 'sec' ? 'sec' : 'reps'}
-        </p>
-      )}
-
       {suggestion && (
         <div className="sx-progression-hint">
-          <span>You hit the top of your rep range last time -- try {formatWeight(suggestion.weightKg, unit)}?</span>
+          <span>Top of the range last time. Try {formatWeight(suggestion.weightKg, unit)}?</span>
           <button type="button" onClick={() => setHintDismissed(true)}>
             Dismiss
           </button>
@@ -47,43 +61,46 @@ export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged,
           index={i}
           set={set}
           unit={unit}
-          repsLabel={entry.targetUnit === 'sec' ? 'sec' : 'reps'}
-          onChange={(patch) =>
-            dispatch({ type: 'UPDATE_SET', sessionId, entryId: entry.id, setId: set.id, patch })
-          }
+          repsLabel={repsLabel}
+          repsPlaceholder={repsPlaceholder}
+          removable={entry.targetSets == null || entry.sets.length > entry.targetSets}
+          onChange={(patch) => update(set.id, patch)}
+          onToggle={() => toggleDone(set, i)}
           onDelete={() => dispatch({ type: 'DELETE_SET', sessionId, entryId: entry.id, setId: set.id })}
         />
       ))}
 
-      {setsFull ? (
-        <p className="sx-helper-text" role="status">
-          All {entry.targetSets} target set{entry.targetSets === 1 ? '' : 's'} logged.
-        </p>
-      ) : (
+      {canAdd && (
         <button
           type="button"
-          className="sx-primary"
-          onClick={() => {
+          className="sx-add-set"
+          onClick={() =>
             dispatch({
               type: 'LOG_SET',
               sessionId,
               entryId: entry.id,
-              set: { done: true, ...lastSetDefaults(entry) },
+              set: {
+                done: false,
+                weightKg: entry.sets[entry.sets.length - 1]?.weightKg ?? null,
+              },
             })
-            onSetLogged?.()
-          }}
+          }
         >
-          Log set {entry.sets.length + 1}
+          + Add set
         </button>
       )}
     </div>
   )
 }
 
-function SetRow({ index, set, unit, repsLabel, onChange, onDelete }) {
+function SetRow({ index, set, unit, repsLabel, repsPlaceholder, removable, onChange, onToggle, onDelete }) {
   const [weightText, setWeightText] = useState(() =>
     set.weightKg == null ? '' : String(toDisplay(set.weightKg, unit)),
   )
+  // Keep the field in step with changes made elsewhere (carry-forward, unit toggle).
+  useEffect(() => {
+    setWeightText(set.weightKg == null ? '' : String(Math.round(toDisplay(set.weightKg, unit) * 10) / 10))
+  }, [set.weightKg, unit])
 
   function commitWeight() {
     const n = parseFloat(weightText)
@@ -105,8 +122,8 @@ function SetRow({ index, set, unit, repsLabel, onChange, onDelete }) {
       <input
         className="sx-input sx-set-reps"
         inputMode="numeric"
-        placeholder={repsLabel}
-        aria-label={`Set ${index + 1} reps`}
+        placeholder={repsPlaceholder}
+        aria-label={`Set ${index + 1} ${repsLabel}`}
         value={set.reps ?? ''}
         onChange={(e) => {
           const n = parseInt(e.target.value, 10)
@@ -124,13 +141,22 @@ function SetRow({ index, set, unit, repsLabel, onChange, onDelete }) {
           onChange({ rpe: Number.isFinite(n) ? n : null })
         }}
       />
-      <label className="sx-set-done">
-        <input type="checkbox" checked={set.done} onChange={(e) => onChange({ done: e.target.checked })} />
-        Done
-      </label>
-      <button type="button" aria-label={`Delete set ${index + 1}`} onClick={onDelete}>
-        &times;
+      <button
+        type="button"
+        className={`sx-set-tick${set.done ? ' sx-done' : ''}`}
+        aria-pressed={set.done}
+        aria-label={`Set ${index + 1} ${set.done ? 'done, tap to undo' : 'mark done'}`}
+        onClick={onToggle}
+      >
+        ✓
       </button>
+      {removable ? (
+        <button type="button" className="sx-set-remove" aria-label={`Delete set ${index + 1}`} onClick={onDelete}>
+          &times;
+        </button>
+      ) : (
+        <span />
+      )}
     </div>
   )
 }

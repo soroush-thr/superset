@@ -1447,3 +1447,262 @@ button.sx-primary {
   font-family: var(--font-mono);
   font-size: var(--fs-1);
 }
+
+/* ---------------------------------------------------- exercise thumbnails */
+
+.sx-thumb {
+  position: relative;
+  display: block;
+  flex: none;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+button.sx-thumb {
+  cursor: pointer;
+}
+
+.sx-thumb-sm {
+  width: 44px;
+  height: 44px;
+}
+
+.sx-thumb-md {
+  width: 68px;
+  height: 68px;
+}
+
+.sx-thumb-lg {
+  width: 120px;
+  height: 120px;
+}
+
+.sx-thumb img,
+.sx-thumb-blank {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Start and end frames crossfade so the picture shows the movement. */
+.sx-thumb-animated .sx-thumb-frame-2 {
+  animation: sx-thumb-flip 2s ease-in-out infinite;
+}
+
+@keyframes sx-thumb-flip {
+  0%,
+  30% {
+    opacity: 0;
+  }
+  50%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-thumb-animated .sx-thumb-frame-2 {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.sx-entry-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sx-entry-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sx-entry-info .sx-entry-name {
+  margin-bottom: 0;
+  font-weight: 600;
+  font-size: var(--fs-3);
+}
+
+.sx-entry-meta {
+  font-size: var(--fs-1);
+  color: var(--text-dim);
+}
+
+.sx-entry-name-grow {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.sx-session-detail-entry .sx-entry-top {
+  align-items: center;
+}
+
+.sx-session-detail-entry .sx-entry-name {
+  margin-bottom: 0;
+}
+
+/* ----------------------------------------------------- active session (compact) */
+
+.sx-session-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin-bottom: 12px;
+  padding: 8px 0 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.sx-session-bar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sx-session-bar-title h2 {
+  margin: 0;
+  font-size: var(--fs-4);
+}
+
+.sx-session-progress {
+  height: 4px;
+  margin-top: 8px;
+  background: var(--surface-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.sx-session-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+
+.sx-session-bar .sx-rest-timer {
+  margin: 8px 0 0;
+  padding: 4px 10px;
+}
+
+.sx-session-note {
+  margin-top: 6px;
+  font-size: var(--fs-2);
+  color: var(--text-dim);
+}
+
+.sx-session-note summary {
+  cursor: pointer;
+}
+
+.sx-session-note .sx-input {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.sx-session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.sx-session-entry {
+  margin-bottom: 0;
+  padding: 10px;
+}
+
+.sx-session-entry.sx-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.sx-session-entry.sx-complete {
+  border-color: var(--in);
+  opacity: 0.8;
+}
+
+.sx-entry-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.sx-entry-progress {
+  font-size: var(--fs-2);
+  color: var(--text-dim);
+}
+
+.sx-complete .sx-entry-progress {
+  color: var(--in);
+}
+
+.sx-entry-remove {
+  min-height: 28px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: var(--fs-4);
+  line-height: 1;
+}
+
+.sx-set-grid {
+  gap: 4px;
+}
+
+.sx-set-row {
+  grid-template-columns: 20px 1fr 1fr 0.7fr 44px 24px;
+  gap: 4px;
+}
+
+.sx-set-row .sx-input {
+  min-height: 36px;
+  padding: 0 4px;
+}
+
+.sx-set-tick {
+  min-height: 36px;
+  padding: 0;
+  color: var(--text-faint);
+  font-size: var(--fs-3);
+}
+
+.sx-set-tick.sx-done {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.sx-set-remove {
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.sx-add-set {
+  min-height: 32px;
+  border-style: dashed;
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+}

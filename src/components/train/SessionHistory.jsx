@@ -3,6 +3,7 @@ import { useStore, useExercises } from '../../App.jsx'
 import { formatWeight } from '../../lib/units.js'
 import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
 import Drawer from '../ui/Drawer.jsx'
+import ExerciseThumb from '../ui/ExerciseThumb.jsx'
 
 function formatDuration(startedAt, endedAt) {
   const mins = Math.max(0, Math.round((new Date(endedAt) - new Date(startedAt)) / 60000))
@@ -94,7 +95,10 @@ function SessionDetail({ session, open, onClose }) {
         const doneSets = entry.sets.filter((s) => s.done)
         return (
           <div key={entry.id} className="sx-session-detail-entry">
-            <span className="sx-entry-name">{exercisesById[entry.exerciseId]?.name ?? entry.exerciseId}</span>
+            <div className="sx-entry-top">
+              <ExerciseThumb exercise={exercisesById[entry.exerciseId]} size="sm" />
+              <span className="sx-entry-name">{exercisesById[entry.exerciseId]?.name ?? entry.exerciseId}</span>
+            </div>
             {doneSets.length === 0 ? (
               <p className="sx-empty-state">No sets logged.</p>
             ) : (

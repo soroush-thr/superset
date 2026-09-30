@@ -289,7 +289,7 @@ function sanitizeSharedRoutine(raw) {
 // A session's entries snapshot their planned targets at start time (not a
 // reference to the plan entry) so editing or deleting the routine later
 // never rewrites or orphans a logged session.
-function newSessionEntry(exerciseId, target = {}) {
+function newSessionEntry(exerciseId, target = {}, sets = []) {
   return {
     id: uid('sen'),
     exerciseId,
@@ -297,20 +297,41 @@ function newSessionEntry(exerciseId, target = {}) {
     targetRepMin: target.repMin ?? null,
     targetRepMax: target.repMax ?? null,
     targetRestSec: target.restSec ?? null,
-    sets: [],
+    sets,
   }
+}
+
+// Sessions start with their sets already laid out as not-done rows, so the
+// active screen is a checklist to tick off rather than a list to build.
+// Weights are pre-filled from the last finished session of the exercise
+// (reps are left for the user, with the target shown as a placeholder).
+const DEFAULT_ADHOC_SETS = 3
+
+function lastDoneSets(state, exerciseId) {
+  const finished = state.sessions
+    .filter((s) => s.endedAt && s.entries.some((e) => e.exerciseId === exerciseId && e.sets.some((x) => x.done)))
+    .sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt))[0]
+  const entry = finished?.entries.find((e) => e.exerciseId === exerciseId && e.sets.some((x) => x.done))
+  return entry ? entry.sets.filter((x) => x.done) : []
+}
+
+function plannedSets(count, prefill = []) {
+  const n = Number.isFinite(count) && count > 0 ? Math.min(count, 20) : DEFAULT_ADHOC_SETS
+  return Array.from({ length: n }, (_, i) => {
+    const p = prefill[i] ?? prefill[prefill.length - 1]
+    return newLoggedSet({ weightKg: p?.weightKg ?? null, done: false })
+  })
 }
 
 // Entries of a generated workout carry two optional extras: `pairId`
 // (superset partners share one letter) and `kind: 'cooldown'` (a stretch --
 // logged like any entry but excluded from volume).
-function generatedSessionEntry(item) {
-  const entry = newSessionEntry(item.exerciseId, {
-    sets: item.sets,
-    repMin: item.repMin,
-    repMax: item.repMax,
-    restSec: item.restSec,
-  })
+function generatedSessionEntry(item, state) {
+  const entry = newSessionEntry(
+    item.exerciseId,
+    { sets: item.sets, repMin: item.repMin, repMax: item.repMax, restSec: item.restSec },
+    plannedSets(item.sets, lastDoneSets(state, item.exerciseId)),
+  )
   if (item.pairId) entry.pairId = item.pairId
   if (item.unit === 'sec') entry.targetUnit = 'sec'
   return entry
@@ -658,12 +679,11 @@ export function reducer(state, action) {
           dayName = day.name
           entries = day.slots.flatMap((slot) =>
             slot.entries.map((e) =>
-              newSessionEntry(e.exerciseId, {
-                sets: e.sets,
-                repMin: e.repMin,
-                repMax: e.repMax,
-                restSec: e.restSec,
-              }),
+              newSessionEntry(
+                e.exerciseId,
+                { sets: e.sets, repMin: e.repMin, repMax: e.repMax, restSec: e.restSec },
+                plannedSets(e.sets, lastDoneSets(state, e.exerciseId)),
+              ),
             ),
           )
         }
@@ -679,10 +699,10 @@ export function reducer(state, action) {
       if (state.activeSessionId || !w || !Array.isArray(w.items) || w.items.length === 0) return state
       const entries = w.items
         .filter((it) => typeof it.exerciseId === 'string')
-        .map(generatedSessionEntry)
+        .map((it) => generatedSessionEntry(it, state))
       for (const c of Array.isArray(w.cooldown) ? w.cooldown : []) {
         if (typeof c.exerciseId !== 'string') continue
-        const entry = newSessionEntry(c.exerciseId, { sets: 1 })
+        const entry = newSessionEntry(c.exerciseId, { sets: 1 }, plannedSets(1))
         entry.kind = 'cooldown'
         entry.note = `Hold about ${c.holdSec ?? 30} s`
         entries.push(entry)
@@ -742,7 +762,13 @@ export function reducer(state, action) {
         ...state,
         sessions: state.sessions.map((s) =>
           s.id === action.sessionId
-            ? { ...s, entries: [...s.entries, newSessionEntry(action.exerciseId)] }
+            ? {
+                ...s,
+                entries: [
+                  ...s.entries,
+                  newSessionEntry(action.exerciseId, {}, plannedSets(null, lastDoneSets(state, action.exerciseId))),
+                ],
+              }
             : s,
         ),
       }
