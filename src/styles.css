@@ -1370,3 +1370,80 @@ button.sx-primary {
 .sx-onboarding-card h2 {
   font-size: var(--fs-5);
 }
+
+/* ------------------------------------------------------ workout generator */
+
+.sx-gen-form {
+  max-width: 560px;
+}
+
+.sx-gen-limits > div {
+  margin-bottom: 8px;
+}
+
+.sx-gen-subgroups {
+  margin-top: 8px;
+}
+
+.sx-link-button {
+  border: none;
+  background: none;
+  padding: 4px 0;
+  min-height: auto;
+  color: var(--accent);
+  font-size: var(--fs-2);
+  text-decoration: underline;
+}
+
+.sx-gen-preview {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+  max-width: 560px;
+}
+
+.sx-gen-preview-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.sx-gen-warning {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--over);
+  background: var(--surface);
+  font-size: var(--fs-2);
+  color: var(--text);
+}
+
+.sx-gen-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.sx-gen-coverage {
+  margin-top: 16px;
+}
+
+.sx-superset {
+  border-left: 2px solid var(--accent-dim);
+  padding-left: 10px;
+}
+
+.sx-superset-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--fs-1);
+}

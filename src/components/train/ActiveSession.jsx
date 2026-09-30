@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useStore, useBodyMapFeed, useExercises } from '../../App.jsx'
 import { volumeForEntries } from '../../lib/coverage.js'
 import { lastSessionFor } from '../../lib/sessions.js'
+import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
 import { useWakeLock } from '../../lib/hooks.js'
 import SetGrid from './SetGrid.jsx'
 import LastTime from './LastTime.jsx'
@@ -26,6 +27,7 @@ export default function ActiveSession() {
   const volume = useMemo(() => {
     if (!session) return {}
     const loggedEntries = session.entries
+      .filter((e) => e.kind !== 'cooldown')
       .map((e) => ({ exerciseId: e.exerciseId, sets: e.sets.filter((s) => s.done).length }))
       .filter((e) => e.sets > 0)
     return volumeForEntries(loggedEntries, exercisesById, state.settings.creditMode)
@@ -39,7 +41,11 @@ export default function ActiveSession() {
 
   return (
     <div className="sx-active-session">
-      <SessionHeader session={session} dispatch={dispatch} />
+      <SessionHeader
+        session={session}
+        dispatch={dispatch}
+        kcal={sessionKcal(session, exercisesById, latestBodyKg(state.bodyLog) ?? DEFAULT_BODY_KG)}
+      />
 
       {session.restEndsAt && (
         <RestTimer
@@ -51,17 +57,23 @@ export default function ActiveSession() {
       {session.entries.length === 0 ? (
         <p className="sx-empty-state">Add an exercise below to start logging.</p>
       ) : (
-        session.entries.map((entry) => (
+        session.entries.map((entry) => {
+          const partners = entry.pairId ? session.entries.filter((e) => e.pairId === entry.pairId) : []
+          const pairIndex = partners.indexOf(entry)
+          return (
           <SessionEntry
             key={entry.id}
             session={session}
             entry={entry}
+            pairLabel={pairIndex >= 0 ? `${entry.pairId}${pairIndex + 1}` : null}
+            pairFirst={pairIndex >= 0 && pairIndex < partners.length - 1}
             exercise={exercisesById[entry.exerciseId]}
             unit={unit}
             dispatch={dispatch}
             allSessions={state.sessions}
           />
-        ))
+          )
+        })
       )}
 
       <AddExercise session={session} exercises={exercisesList} dispatch={dispatch} />
@@ -102,7 +114,7 @@ function StartSession({ state, dispatch }) {
   )
 }
 
-function SessionHeader({ session, dispatch }) {
+function SessionHeader({ session, dispatch, kcal }) {
   return (
     <div className="sx-session-header">
       <div>
@@ -110,6 +122,7 @@ function SessionHeader({ session, dispatch }) {
         <span className="sx-eyebrow sx-num">
           Started{' '}
           {new Date(session.startedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+          {kcal != null ? ` · ~${kcal} kcal so far` : ''}
         </span>
       </div>
       <label className="sx-field sx-field-note">
@@ -145,21 +158,28 @@ function SessionHeader({ session, dispatch }) {
   )
 }
 
-function SessionEntry({ session, entry, exercise, unit, dispatch, allSessions }) {
+function SessionEntry({ session, entry, exercise, unit, dispatch, allSessions, pairLabel, pairFirst }) {
   const last = useMemo(
     () => lastSessionFor(allSessions, entry.exerciseId, { excludeSessionId: session.id }),
     [allSessions, entry.exerciseId, session.id],
   )
 
   function handleSetLogged() {
+    // No rest between superset partners (go straight to the next move) or
+    // after a stretch.
+    if (pairFirst || entry.kind === 'cooldown') return
     const restSec = entry.targetRestSec ?? DEFAULT_REST_SEC
     dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: Date.now() + restSec * 1000 })
   }
 
   return (
-    <div className="sx-entry sx-session-entry">
+    <div className={`sx-entry sx-session-entry${pairLabel ? ' sx-superset' : ''}`}>
       <div className="sx-entry-header">
-        <span className="sx-entry-name">{exercise?.name ?? entry.exerciseId}</span>
+        <span className="sx-entry-name">
+          {pairLabel && <span className="sx-superset-tag">{pairLabel}</span>}
+          {entry.kind === 'cooldown' && <span className="sx-superset-tag">Stretch</span>}
+          {exercise?.name ?? entry.exerciseId}
+        </span>
         <button
           type="button"
           onClick={() => dispatch({ type: 'DELETE_SESSION_ENTRY', sessionId: session.id, entryId: entry.id })}

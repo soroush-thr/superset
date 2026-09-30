@@ -301,6 +301,21 @@ function newSessionEntry(exerciseId, target = {}) {
   }
 }
 
+// Entries of a generated workout carry two optional extras: `pairId`
+// (superset partners share one letter) and `kind: 'cooldown'` (a stretch --
+// logged like any entry but excluded from volume).
+function generatedSessionEntry(item) {
+  const entry = newSessionEntry(item.exerciseId, {
+    sets: item.sets,
+    repMin: item.repMin,
+    repMax: item.repMax,
+    restSec: item.restSec,
+  })
+  if (item.pairId) entry.pairId = item.pairId
+  if (item.unit === 'sec') entry.targetUnit = 'sec'
+  return entry
+}
+
 function newLoggedSet({ weightKg = null, reps = null, rpe = null, setType = 'normal', done = true } = {}) {
   return { id: uid('set'), weightKg, reps, rpe, setType, done, ts: new Date().toISOString() }
 }
@@ -657,6 +672,71 @@ export function reducer(state, action) {
       return { ...state, sessions: [...state.sessions, session], activeSessionId: session.id }
     }
 
+    // A generated workout (src/lib/generator.js) becomes an ad-hoc session with
+    // its targets pre-filled. Refuses while another session is in progress.
+    case 'START_GENERATED_SESSION': {
+      const w = action.workout
+      if (state.activeSessionId || !w || !Array.isArray(w.items) || w.items.length === 0) return state
+      const entries = w.items
+        .filter((it) => typeof it.exerciseId === 'string')
+        .map(generatedSessionEntry)
+      for (const c of Array.isArray(w.cooldown) ? w.cooldown : []) {
+        if (typeof c.exerciseId !== 'string') continue
+        const entry = newSessionEntry(c.exerciseId, { sets: 1 })
+        entry.kind = 'cooldown'
+        entry.note = `Hold about ${c.holdSec ?? 30} s`
+        entries.push(entry)
+      }
+      const session = newSession({ dayName: typeof w.name === 'string' ? w.name : 'Generated workout', entries })
+      session.note = typeof w.warmupNote === 'string' ? w.warmupNote : ''
+      return { ...state, sessions: [...state.sessions, session], activeSessionId: session.id }
+    }
+
+    // Save a generated workout as a new day, in an existing routine or a
+    // new one. Superset partners become a paired slot; the cooldown lives in
+    // the day note rather than as entries, so it never counts toward volume.
+    case 'SAVE_GENERATED_DAY': {
+      const w = action.workout
+      if (!w || !Array.isArray(w.items) || w.items.length === 0) return state
+      const toEntry = (it) => ({
+        ...newSlot(it.exerciseId).entries[0],
+        sets: it.sets,
+        repMin: it.repMin,
+        repMax: it.repMax,
+        restSec: it.restSec,
+        ...(it.unit === 'sec' ? { setType: 'isometric' } : {}),
+      })
+      const slots = []
+      const done = new Set()
+      for (const it of w.items) {
+        if (done.has(it) || typeof it.exerciseId !== 'string') continue
+        done.add(it)
+        const partner = it.pairId ? w.items.find((o) => o !== it && !done.has(o) && o.pairId === it.pairId) : null
+        if (partner) {
+          done.add(partner)
+          slots.push({ id: uid('s'), type: 'paired', entries: [toEntry(it), toEntry(partner)] })
+        } else {
+          slots.push({ id: uid('s'), type: 'single', entries: [toEntry(it)] })
+        }
+      }
+      const day = {
+        id: uid('d'),
+        name: typeof w.name === 'string' ? w.name.slice(0, 200) : 'Generated workout',
+        note: [w.warmupNote, w.cooldownNote].filter((t) => typeof t === 'string' && t).join(' '),
+        slots,
+      }
+      const existing = action.routineId ? findRoutine(state, action.routineId) : null
+      if (existing) {
+        return {
+          ...state,
+          routines: state.routines.map((r) => (r.id === existing.id ? { ...r, days: [...r.days, day] } : r)),
+          activeRoutineId: existing.id,
+        }
+      }
+      const routine = { ...newRoutine('Generated workouts'), days: [day] }
+      return { ...state, routines: [...state.routines, routine], activeRoutineId: routine.id }
+    }
+
     case 'ADD_SESSION_ENTRY':
       return {
         ...state,
@@ -837,6 +917,7 @@ const UNDOABLE_ACTION_TYPES = new Set([
   'MOVE_SLOT',
   'MERGE_SLOTS_AS_PAIRED',
   'SPLIT_PAIRED_SLOT',
+  'SAVE_GENERATED_DAY',
 ])
 
 const HISTORY_LIMIT = 50

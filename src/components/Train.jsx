@@ -4,11 +4,13 @@ import Segmented from './ui/Segmented.jsx'
 import ActiveSession from './train/ActiveSession.jsx'
 import SessionHistory from './train/SessionHistory.jsx'
 import Progress from './train/Progress.jsx'
+import Generate from './train/Generate.jsx'
 
 const TABS = [
   { value: 'active', label: 'Active' },
   { value: 'history', label: 'History' },
   { value: 'progress', label: 'Progress' },
+  { value: 'generate', label: 'Generate' },
 ]
 
 /** Logged workouts: the active session, past sessions, and progression
@@ -33,6 +35,7 @@ export default function Train() {
       {tab === 'active' && <ActiveSession />}
       {tab === 'history' && <SessionHistory />}
       {tab === 'progress' && <Progress />}
+      {tab === 'generate' && <Generate onStarted={() => setTab('active')} />}
     </div>
   )
 }

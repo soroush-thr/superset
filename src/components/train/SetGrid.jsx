@@ -17,13 +17,18 @@ function lastSetDefaults(entry) {
  */
 export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged, previousSession }) {
   const [hintDismissed, setHintDismissed] = useState(false)
+  // A planned entry has a fixed number of sets; ad-hoc entries are open-ended.
+  const setsFull = entry.targetSets != null && entry.sets.length >= entry.targetSets
   const suggestion = hintDismissed ? null : suggestNextLoad(previousSession, entry.targetRepMax, unit)
 
   return (
     <div className="sx-set-grid">
-      {(entry.targetSets || entry.targetRepMin != null || entry.targetRepMax != null) && (
+      {entry.kind === 'cooldown' ? (
+        <p className="sx-helper-text">{entry.note}</p>
+      ) : (entry.targetSets || entry.targetRepMin != null || entry.targetRepMax != null) && (
         <p className="sx-helper-text">
-          Target: {entry.targetSets ?? '-'} sets of {entry.targetRepMin ?? '-'}-{entry.targetRepMax ?? '-'} reps
+          Target: {entry.targetSets ?? '-'} sets of {entry.targetRepMin ?? '-'}-{entry.targetRepMax ?? '-'}{' '}
+          {entry.targetUnit === 'sec' ? 'sec' : 'reps'}
         </p>
       )}
 
@@ -42,6 +47,7 @@ export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged,
           index={i}
           set={set}
           unit={unit}
+          repsLabel={entry.targetUnit === 'sec' ? 'sec' : 'reps'}
           onChange={(patch) =>
             dispatch({ type: 'UPDATE_SET', sessionId, entryId: entry.id, setId: set.id, patch })
           }
@@ -49,26 +55,32 @@ export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged,
         />
       ))}
 
-      <button
-        type="button"
-        className="sx-primary"
-        onClick={() => {
-          dispatch({
-            type: 'LOG_SET',
-            sessionId,
-            entryId: entry.id,
-            set: { done: true, ...lastSetDefaults(entry) },
-          })
-          onSetLogged?.()
-        }}
-      >
-        Log set {entry.sets.length + 1}
-      </button>
+      {setsFull ? (
+        <p className="sx-helper-text" role="status">
+          All {entry.targetSets} target set{entry.targetSets === 1 ? '' : 's'} logged.
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="sx-primary"
+          onClick={() => {
+            dispatch({
+              type: 'LOG_SET',
+              sessionId,
+              entryId: entry.id,
+              set: { done: true, ...lastSetDefaults(entry) },
+            })
+            onSetLogged?.()
+          }}
+        >
+          Log set {entry.sets.length + 1}
+        </button>
+      )}
     </div>
   )
 }
 
-function SetRow({ index, set, unit, onChange, onDelete }) {
+function SetRow({ index, set, unit, repsLabel, onChange, onDelete }) {
   const [weightText, setWeightText] = useState(() =>
     set.weightKg == null ? '' : String(toDisplay(set.weightKg, unit)),
   )
@@ -93,7 +105,7 @@ function SetRow({ index, set, unit, onChange, onDelete }) {
       <input
         className="sx-input sx-set-reps"
         inputMode="numeric"
-        placeholder="reps"
+        placeholder={repsLabel}
         aria-label={`Set ${index + 1} reps`}
         value={set.reps ?? ''}
         onChange={(e) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useStore, useExercises } from '../../App.jsx'
 import { formatWeight } from '../../lib/units.js'
+import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
 import Drawer from '../ui/Drawer.jsx'
 
 function formatDuration(startedAt, endedAt) {
@@ -12,6 +13,8 @@ function formatDuration(startedAt, endedAt) {
 /** A list of finished sessions, newest first; tap a row for full per-set detail. */
 export default function SessionHistory() {
   const { state } = useStore()
+  const { byId: exercisesById } = useExercises()
+  const bodyKg = latestBodyKg(state.bodyLog) ?? DEFAULT_BODY_KG
   const [openSessionId, setOpenSessionId] = useState(null)
 
   const finished = [...state.sessions]
@@ -28,6 +31,7 @@ export default function SessionHistory() {
     <div className="sx-session-history">
       {finished.map((session) => {
         const totalSets = session.entries.reduce((sum, e) => sum + e.sets.filter((s) => s.done).length, 0)
+        const kcal = sessionKcal(session, exercisesById, bodyKg)
         return (
           <button
             type="button"
@@ -43,7 +47,9 @@ export default function SessionHistory() {
                 {formatDuration(session.startedAt, session.endedAt)}
               </span>
             </div>
-            <span className="sx-num">{totalSets} sets</span>
+            <span className="sx-num">
+              {totalSets} sets{kcal != null ? ` · ~${kcal} kcal` : ''}
+            </span>
           </button>
         )
       })}
@@ -57,6 +63,7 @@ function SessionDetail({ session, open, onClose }) {
   const { state } = useStore()
   const { byId: exercisesById } = useExercises()
   const unit = state.settings.unit ?? 'kg'
+  const loggedKg = latestBodyKg(state.bodyLog)
 
   if (!session) {
     return <Drawer open={open} onClose={onClose} title="Session" />
@@ -73,6 +80,14 @@ function SessionDetail({ session, open, onClose }) {
         {' · '}
         {formatDuration(session.startedAt, session.endedAt)}
       </span>
+      {(() => {
+        const kcal = sessionKcal(session, exercisesById, loggedKg ?? DEFAULT_BODY_KG)
+        return kcal == null ? null : (
+          <p className="sx-helper-text">
+            About {kcal} kcal burned (rough estimate, ±25%; {loggedKg ? 'from your latest logged body weight' : `assumes ${DEFAULT_BODY_KG} kg, log yours in Progress`}).
+          </p>
+        )
+      })()}
       {session.note && <p className="sx-helper-text">{session.note}</p>}
 
       {session.entries.map((entry) => {

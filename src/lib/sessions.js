@@ -39,6 +39,8 @@ export function sessionSetCounts(sessions) {
   const counts = {}
   for (const session of sessions) {
     for (const entry of session.entries) {
+      // Cooldown stretches (generated workouts) must not inflate volume.
+      if (entry.kind === 'cooldown') continue
       const n = doneSets(entry).length
       if (n === 0) continue
       counts[entry.exerciseId] = (counts[entry.exerciseId] || 0) + n
