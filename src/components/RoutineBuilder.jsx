@@ -23,6 +23,36 @@ function formatFrequency(cycleDays) {
 // devices anyway).
 const SLOT_DRAG_MIME = 'application/x-superset-slot'
 
+// Exercise thumbnails are loading="lazy", so any that were never scrolled
+// into view would print as blank tiles. Load them all first (capped, so a
+// slow or offline image can't block printing), then open the print dialog.
+const PRINT_IMAGE_TIMEOUT_MS = 8000
+
+async function printWithImages() {
+  const images = [...document.images]
+  images.forEach((img) => {
+    img.loading = 'eager'
+  })
+  const pending = images
+    .filter((img) => !img.complete)
+    .map((img) => new Promise((resolve) => {
+      img.addEventListener('load', resolve, { once: true })
+      img.addEventListener('error', resolve, { once: true })
+    }))
+  await Promise.race([
+    Promise.all(pending),
+    new Promise((resolve) => setTimeout(resolve, PRINT_IMAGE_TIMEOUT_MS)),
+  ])
+  window.print()
+}
+
+/** Superset letters for a day's paired slots, in order: A, B, C... Single
+ *  slots get null. Shown on screen and on paper so partners read as a pair. */
+function pairLetters(slots) {
+  let next = 0
+  return slots.map((slot) => (slot.type === 'paired' ? String.fromCharCode(65 + next++) : null))
+}
+
 function readSlotDragData(e) {
   const raw = e.dataTransfer.getData(SLOT_DRAG_MIME)
   if (!raw) return null
@@ -108,7 +138,7 @@ function RoutineSelector({ state, dispatch, routine }) {
         New
       </button>
       <select
-        className="sx-input"
+        className="sx-input sx-template-select"
         value=""
         onChange={(e) => {
           if (e.target.value) dispatch({ type: 'INSTANTIATE_TEMPLATE', templateId: e.target.value })
@@ -149,7 +179,7 @@ function RoutineSelector({ state, dispatch, routine }) {
           >
             Delete
           </button>
-          <button type="button" onClick={() => window.print()}>
+          <button type="button" onClick={printWithImages}>
             Print
           </button>
           <ShareButton routine={routine} />
@@ -316,6 +346,7 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
     (sum, slot) => sum + slot.entries.reduce((s, e) => s + (e.sets || 0), 0),
     0,
   )
+  const letters = pairLetters(day.slots)
 
   return (
     <div className="sx-day-card">
@@ -391,6 +422,7 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
               routine={routine}
               day={day}
               slot={slot}
+              pairLetter={letters[i]}
               canMergeWithNext={i + 1 < day.slots.length}
               dispatch={dispatch}
               exercisesById={exercisesById}
@@ -402,7 +434,7 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
   )
 }
 
-function SlotEditor({ routine, day, slot, canMergeWithNext, dispatch, exercisesById }) {
+function SlotEditor({ routine, day, slot, pairLetter, canMergeWithNext, dispatch, exercisesById }) {
   const isPaired = slot.type === 'paired'
 
   function handleDragStart(e) {
@@ -443,7 +475,11 @@ function SlotEditor({ routine, day, slot, canMergeWithNext, dispatch, exercisesB
       <span className="sx-slot-drag-handle" aria-hidden="true" title="Drag to reorder">
         &#8942;&#8942;
       </span>
-      {isPaired && <span className="sx-eyebrow sx-slot-paired-label">Superset</span>}
+      {isPaired && (
+        <span className="sx-eyebrow sx-slot-paired-label">
+          Superset {pairLetter} -- no rest between, rest after the last
+        </span>
+      )}
       {slot.entries.map((entry, entryIndex) => (
         <EntryEditor
           key={entryIndex}
@@ -452,6 +488,7 @@ function SlotEditor({ routine, day, slot, canMergeWithNext, dispatch, exercisesB
           slot={slot}
           entry={entry}
           entryIndex={entryIndex}
+          pairTag={isPaired ? `${pairLetter}${entryIndex + 1}` : null}
           dispatch={dispatch}
           exercisesById={exercisesById}
         />
@@ -501,7 +538,7 @@ function SlotEditor({ routine, day, slot, canMergeWithNext, dispatch, exercisesB
   )
 }
 
-function EntryEditor({ routine, day, slot, entry, entryIndex, dispatch, exercisesById }) {
+function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch, exercisesById }) {
   const exercise = exercisesById[entry.exerciseId]
   const { state } = useStore()
   const exercisesIndex = useExercises()
@@ -541,7 +578,10 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, dispatch, exercise
     <div className="sx-entry">
       <div className="sx-entry-header">
         <ExerciseThumb exercise={exercise} size="sm" />
-        <span className="sx-entry-name sx-entry-name-grow">{exercise?.name ?? entry.exerciseId}</span>
+        <span className="sx-entry-name sx-entry-name-grow">
+          {pairTag && <span className="sx-superset-tag">{pairTag}</span>}
+          {exercise?.name ?? entry.exerciseId}
+        </span>
         {substitutes.length > 0 && (
           <select
             className="sx-input sx-entry-swap"
@@ -599,7 +639,8 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, dispatch, exercise
             onChange={(e) => patch({ tempo: e.target.value })}
           />
         </label>
-        <label className="sx-field">
+        {/* "normal" is the default and says nothing on paper; print hides it. */}
+        <label className={`sx-field${entry.setType === 'normal' ? ' sx-field-default' : ''}`}>
           <span className="sx-eyebrow">Set type</span>
           <select
             className="sx-input"
@@ -621,6 +662,8 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, dispatch, exercise
             onChange={(e) => patch({ note: e.target.value })}
           />
         </label>
+        {/* Inputs can't wrap, so paper gets the note as plain text. */}
+        {entry.note && <p className="sx-print-only sx-print-note">{entry.note}</p>}
       </div>
     </div>
   )

@@ -1302,6 +1302,11 @@ button.sx-primary {
 }
 
 /* ------------------------------------------------------------------ print */
+
+.sx-print-only {
+  display: none;
+}
+
 /* A routine sheet: white background, no nav/body-map, no interactive chrome
    (buttons -- steppers, reorder, add/remove, selects' surrounding controls).
    Days and slots are already fully expanded in the DOM (no accordion), so
@@ -1324,20 +1329,162 @@ button.sx-primary {
     padding: 0;
   }
 
+  /* Editor-only chrome and guidance: nothing to act on from paper. */
+  .sx-entry-swap,
+  .sx-slot-drag-handle,
+  .sx-template-select,
+  .sx-helper-text,
+  .sx-field-default {
+    display: none !important;
+  }
+
+  /* The routine selector becomes the sheet's title. */
+  .sx-routine-selector {
+    margin: 4px 0 8px;
+  }
+
+  .sx-routine-selector select {
+    padding: 0;
+    border: none;
+    font-family: var(--font-display);
+    font-size: var(--fs-5);
+    font-weight: 700;
+  }
+
+  .sx-cycle-days,
+  .sx-weeks-editor {
+    display: inline-flex;
+    vertical-align: top;
+    margin: 0 24px 8px 0;
+  }
+
+  /* One day per page; the first day shares page one with the header.
+     Within a day, break between exercises, never through one. */
   .sx-day-card {
-    break-inside: avoid;
+    padding: 10px;
+    margin-bottom: 0;
     background: #fff;
     border-color: #999;
+  }
+
+  .sx-day-card + .sx-day-card {
+    break-before: page;
+  }
+
+  .sx-day-card-header {
+    margin-bottom: 8px;
   }
 
   .sx-slot {
+    break-inside: avoid;
+    padding: 4px 8px;
+    margin-bottom: 5px;
     border-color: #ccc;
   }
 
-  .sx-input {
+  .sx-slot-paired {
+    border-left: 4px solid #1f5c55;
+  }
+
+  .sx-slot-paired-label {
+    color: #1f5c55;
+    font-weight: 700;
+  }
+
+  .sx-input,
+  .sx-number-field-controls input {
+    min-height: 28px;
     background: #fff;
     border-color: #999;
     color: #000;
+    appearance: none;
+  }
+
+  .sx-number-field-controls input {
+    width: 48px;
+    border: 1px solid #999;
+    border-radius: var(--radius);
+  }
+
+  /* Each exercise: name across the top, then the start and end frames
+     side by side (paper can't crossfade) next to the prescription. */
+  .sx-entry {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'name name'
+      'thumb fields';
+    column-gap: 12px;
+    padding: 2px 0;
+  }
+
+  .sx-entry-header {
+    display: contents;
+  }
+
+  .sx-entry-header .sx-entry-name {
+    grid-area: name;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .sx-entry-header .sx-thumb {
+    grid-area: thumb;
+    display: flex;
+    gap: 6px;
+    width: auto;
+    height: auto;
+    border: none;
+    background: none;
+  }
+
+  .sx-entry-header .sx-thumb img {
+    position: static;
+    width: 120px;
+    height: 80px;
+    object-fit: contain;
+    border: 1px solid #ccc;
+    border-radius: var(--radius);
+    background: #fff;
+  }
+
+  .sx-entry-header .sx-thumb-animated .sx-thumb-frame-2 {
+    animation: none;
+    opacity: 1;
+  }
+
+  .sx-entry-fields {
+    grid-area: fields;
+    gap: 6px 8px;
+    align-content: start;
+  }
+
+  .sx-entry-fields .sx-field .sx-input {
+    width: 84px;
+  }
+
+  .sx-entry-fields .sx-eyebrow {
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  /* The note input is swapped for its wrapping plain-text twin. */
+  .sx-field-note {
+    display: none !important;
+  }
+
+  .sx-print-only {
+    display: block;
+  }
+
+  .sx-print-note {
+    flex-basis: 100%;
+    margin: 0;
+    padding: 4px 8px;
+    border-left: 2px solid #999;
+    background: #f4f4f4;
+    font-size: var(--fs-2);
+    line-height: 1.35;
   }
 
   .sx-eyebrow,
