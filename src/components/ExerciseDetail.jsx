@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo } from 'react'
 import Drawer from './ui/Drawer.jsx'
 import BodyMap from './BodyMap.jsx'
-import { IMG_BASE } from '../lib/constants.js'
+import ExerciseThumb from './ui/ExerciseThumb.jsx'
 import { subgroupName } from '../lib/taxonomy.js'
 import { peakNormalize, substitutesFor } from '../lib/coverage.js'
 import { equipmentOptionsFor, allEquipment } from '../lib/equipment.js'
@@ -12,16 +12,8 @@ function label(value) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
-function ExerciseImage({ src }) {
-  const [failed, setFailed] = useState(false)
-  if (!src || failed) {
-    return <div className="sx-detail-image-placeholder" aria-hidden="true" />
-  }
-  return <img src={src} alt="" loading="lazy" onError={() => setFailed(true)} />
-}
-
 /**
- * Section 9.2: images, instructions, equipment/level/mechanic/force, the
+ * Section 9.2: the animated start/end picture, instructions, equipment/level/mechanic/force, the
  * sub-group weight list, a mini body map, substitute suggestions (cosine
  * similarity over `sub`, same equipment/level gate as Coverage's gap
  * suggestions), and -- for a user-created exercise -- a delete action.
@@ -64,8 +56,7 @@ export default function ExerciseDetail({ exercise, open, onClose, onSelectExerci
   return (
     <Drawer open={open} onClose={onClose} title={exercise.name}>
       <div className="sx-detail-images">
-        <ExerciseImage src={exercise.images[0] && `${IMG_BASE}${exercise.images[0]}`} />
-        <ExerciseImage src={exercise.images[1] && `${IMG_BASE}${exercise.images[1]}`} />
+        <ExerciseThumb key={exercise.id} exercise={exercise} size="full" />
       </div>
 
       <button

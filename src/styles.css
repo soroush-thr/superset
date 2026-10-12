@@ -187,7 +187,55 @@ button.sx-primary {
   padding: 20px;
 }
 
+/* Phone: the toggle strip sits at the top, the open map directly under it
+   (front and back side by side), then the screen's content. */
+.sx-side-toggle {
+  order: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-dim);
+  padding: 0 16px;
+}
+
+.sx-layout > .sx-side {
+  order: 1;
+}
+
+.sx-layout > .sx-main {
+  order: 2;
+}
+
+@media (max-width: 899px) {
+  .sx-side.sx-side--active {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sx-side.sx-side--collapsed {
+    display: none;
+  }
+}
+
 @media (min-width: 900px) {
+  .sx-side-toggle {
+    display: none;
+  }
+
+  .sx-layout > .sx-side,
+  .sx-layout > .sx-main {
+    order: 0;
+  }
+
   .sx-rail {
     display: flex;
     flex-direction: column;
@@ -319,27 +367,51 @@ button.sx-primary {
   color: var(--text);
 }
 
+/* Joined buttons, not a field: shrink-wrapped to its options (never
+   stretched across the column like a text input), wrapping on narrow
+   screens, with the selected option clearly filled. */
 .sx-segmented {
   display: inline-flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  max-width: 100%;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
+  border-radius: calc(var(--radius) + 2px);
 }
 
 .sx-segmented-item {
-  border: none;
-  border-radius: 0;
-  background: var(--surface);
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
   color: var(--text-dim);
 }
 
-.sx-segmented-item + .sx-segmented-item {
-  border-left: 1px solid var(--line);
+.sx-segmented-item:hover {
+  color: var(--text);
+  border-color: transparent;
 }
 
 .sx-segmented-item.sx-active {
-  background: var(--surface-2);
-  color: var(--accent);
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+@media (max-width: 599px) {
+  .sx-segmented {
+    display: flex;
+    align-self: stretch;
+  }
+
+  .sx-segmented-item {
+    flex: 1 1 auto;
+    padding: 0 10px;
+  }
 }
 
 .sx-number-field {
@@ -398,6 +470,7 @@ button.sx-primary {
 .sx-drawer {
   width: min(480px, 100vw);
   height: 100vh;
+  height: 100dvh;
   background: var(--surface);
   border-left: 1px solid var(--line);
   overflow-y: auto;
@@ -480,6 +553,11 @@ button.sx-primary {
 .sx-search {
   flex: 1;
   min-width: 200px;
+}
+
+.sx-filters-toggle {
+  margin-bottom: 10px;
+  color: var(--text-dim);
 }
 
 .sx-filter-row {
@@ -619,21 +697,50 @@ button.sx-primary {
   max-width: 160px;
 }
 
+/* Phone: one clean line of chips under the name (the muscle summary is in
+   the detail drawer), and a compact "Add to" picker so the name has room. */
+@media (max-width: 599px) {
+  .sx-exercise-row {
+    gap: 4px;
+  }
+
+  .sx-exercise-row-main {
+    gap: 10px;
+  }
+
+  .sx-exercise-row-info {
+    flex: 1;
+  }
+
+  .sx-exercise-row-chips {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .sx-exercise-row-chips .sx-chip-static {
+    white-space: nowrap;
+  }
+
+  .sx-exercise-muscle-summary {
+    display: none;
+  }
+
+  .sx-favorite-star {
+    min-width: 34px;
+  }
+
+  .sx-add-to-day {
+    width: 90px;
+    padding-left: 6px;
+    padding-right: 2px;
+  }
+}
+
 /* --------------------------------------------------------- 9.2 detail drawer */
 
 .sx-detail-images {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.sx-detail-images img,
-.sx-detail-image-placeholder {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  object-fit: cover;
+  max-width: 420px;
+  margin: 0 auto 16px;
 }
 
 .sx-detail-meta {
@@ -1000,6 +1107,18 @@ button.sx-primary {
   font-size: var(--fs-2);
 }
 
+/* Phone: the name takes its own line so Min and Max fit beneath it. */
+@media (max-width: 599px) {
+  .sx-targets-row {
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+
+  .sx-targets-name {
+    flex-basis: 100%;
+  }
+}
+
 .sx-data-actions {
   display: flex;
   gap: 10px;
@@ -1361,7 +1480,7 @@ button.sx-primary {
   /* One day per page; the first day shares page one with the header.
      Within a day, break between exercises, never through one. */
   .sx-day-card {
-    padding: 10px;
+    padding: 8px 10px 0;
     margin-bottom: 0;
     background: #fff;
     border-color: #999;
@@ -1382,7 +1501,10 @@ button.sx-primary {
     border-color: #ccc;
   }
 
+  /* A superset may split between its exercises (each entry still holds
+     together) so a long day doesn't push a whole pair onto a new page. */
   .sx-slot-paired {
+    break-inside: auto;
     border-left: 4px solid #1f5c55;
   }
 
@@ -1393,7 +1515,7 @@ button.sx-primary {
 
   .sx-input,
   .sx-number-field-controls input {
-    min-height: 28px;
+    min-height: 26px;
     background: #fff;
     border-color: #999;
     color: #000;
@@ -1406,16 +1528,18 @@ button.sx-primary {
     border-radius: var(--radius);
   }
 
-  /* Each exercise: name across the top, then the start and end frames
-     side by side (paper can't crossfade) next to the prescription. */
+  /* Each exercise: the start and end frames side by side (paper can't
+     crossfade) on the left; name, prescription and note stacked beside them. */
   .sx-entry {
     display: grid;
     grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
     grid-template-areas:
-      'name name'
+      'thumb name'
       'thumb fields';
     column-gap: 12px;
-    padding: 2px 0;
+    padding: 3px 0;
+    break-inside: avoid;
   }
 
   .sx-entry-header {
@@ -1424,7 +1548,7 @@ button.sx-primary {
 
   .sx-entry-header .sx-entry-name {
     grid-area: name;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     font-weight: 600;
   }
 
@@ -1455,8 +1579,13 @@ button.sx-primary {
 
   .sx-entry-fields {
     grid-area: fields;
-    gap: 6px 8px;
+    gap: 3px 8px;
     align-content: start;
+  }
+
+  .sx-entry-fields .sx-field,
+  .sx-entry-fields .sx-number-field {
+    gap: 1px;
   }
 
   .sx-entry-fields .sx-field .sx-input {
@@ -1480,7 +1609,7 @@ button.sx-primary {
   .sx-print-note {
     flex-basis: 100%;
     margin: 0;
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-left: 2px solid #999;
     background: #f4f4f4;
     font-size: var(--fs-2);
@@ -1512,6 +1641,17 @@ button.sx-primary {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Onboarding choices are big, equal-width targets, not a text field. */
+.sx-onboarding-card .sx-segmented {
+  align-self: stretch;
+}
+
+.sx-onboarding-card .sx-segmented-item {
+  flex: 1 1 0;
+  min-height: 48px;
+  font-size: var(--fs-4);
 }
 
 .sx-onboarding-card h2 {
@@ -1626,6 +1766,13 @@ button.sx-thumb {
 .sx-thumb-lg {
   width: 120px;
   height: 120px;
+}
+
+/* Fills its container as a square: the drawer's animated hero image. */
+.sx-thumb-full {
+  width: 100%;
+  aspect-ratio: 1;
+  cursor: default;
 }
 
 .sx-thumb img,

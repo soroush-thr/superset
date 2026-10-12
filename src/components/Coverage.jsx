@@ -57,15 +57,20 @@ export default function Coverage() {
 
   const plannedStatuses = useMemo(() => computeStatuses(volume, targets), [volume, targets])
 
-  const [viewMode, setViewMode] = useState('planned')
+  const [pickedView, setViewMode] = useState(() => (state.sessions.some((s) => s.endedAt) ? 'both' : 'planned'))
+  // Without a routine there is nothing to plan against, but what you have
+  // actually trained -- routine day, ad-hoc or generated workout alike --
+  // still counts, so that view is the only one offered.
+  const viewMode = routine ? pickedView : 'actual'
   const [windowDays, setWindowDays] = useState(7)
 
   const actualVolume = useMemo(() => {
-    const finished = state.sessions.filter((s) => s.endedAt)
-    const entries = sessionSetCounts(sessionsInWindow(finished, windowDays))
+    // Finished sessions, plus sets already ticked in the one in progress.
+    const logged = state.sessions.filter((s) => s.endedAt || s.id === state.activeSessionId)
+    const entries = sessionSetCounts(sessionsInWindow(logged, windowDays))
     const factor = windowDays === 7 ? 1 : 7 / windowDays
     return volumeForEntries(entries, exercisesById, state.settings.creditMode, factor)
-  }, [state.sessions, windowDays, exercisesById, state.settings.creditMode])
+  }, [state.sessions, state.activeSessionId, windowDays, exercisesById, state.settings.creditMode])
 
   const actualStatuses = useMemo(() => computeStatuses(actualVolume, targets), [actualVolume, targets])
 
@@ -86,7 +91,22 @@ export default function Coverage() {
     return (
       <div>
         <span className="sx-eyebrow">Coverage</span>
-        <h2>Build a routine to see where your volume lands.</h2>
+        <h2>Trained muscles</h2>
+        <p className="sx-helper-text">
+          Everything you have logged counts here, including generated workouts. Create a routine to
+          also compare against a plan.
+        </p>
+        <div className="sx-coverage-controls">
+          <Segmented value={windowDays} onChange={setWindowDays} options={WINDOW_OPTIONS} />
+          <CreditModeToggle state={state} dispatch={dispatch} />
+        </div>
+        <Ledger
+          sortMode="major"
+          plannedStatuses={plannedStatuses}
+          actualStatuses={actualStatuses}
+          targets={targets}
+          viewMode="actual"
+        />
         <button
           type="button"
           className="sx-primary"

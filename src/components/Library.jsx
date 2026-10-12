@@ -57,6 +57,9 @@ export default function Library() {
   )
   const [openExercise, setOpenExercise] = useState(null)
   const [editorOpen, setEditorOpen] = useState(false)
+  // Filters start collapsed on phones, where five chip rows would push the
+  // results several screens down.
+  const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 900px)').matches)
 
   // Equipment chip set is pre-filtered by the active profile (section 9.1).
   // Switching profiles must not clear the other filter categories, so this
@@ -104,6 +107,14 @@ export default function Library() {
     selectedForces,
   ])
 
+  const activeFilterCount =
+    selectedMajors.size +
+    selectedLevels.size +
+    selectedMechanics.size +
+    selectedForces.size +
+    (customOnly ? 1 : 0) +
+    (favoritesOnly ? 1 : 0)
+
   const activeRoutine = state.routines.find((r) => r.id === state.activeRoutineId)
 
   function addToDay(exerciseId, dayId) {
@@ -141,62 +152,75 @@ export default function Library() {
         </button>
       </div>
 
-      <FilterRow title="Muscle group">
-        {MAJORS.map((m) => (
-          <Chip
-            key={m.id}
-            label={m.name}
-            active={selectedMajors.has(m.id)}
-            onClick={() => setSelectedMajors((s) => toggle(s, m.id))}
-          />
-        ))}
-        <Chip label="Custom only" active={customOnly} onClick={() => setCustomOnly((c) => !c)} />
-        <Chip label="Favorites" active={favoritesOnly} onClick={() => setFavoritesOnly((f) => !f)} />
-      </FilterRow>
+      <button
+        type="button"
+        className="sx-filters-toggle"
+        aria-expanded={filtersOpen}
+        onClick={() => setFiltersOpen((v) => !v)}
+      >
+        Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''} {filtersOpen ? '▴' : '▾'}
+      </button>
 
-      <FilterRow title="Equipment">
-        {equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList).map((eq) => (
-          <Chip
-            key={eq}
-            label={label(eq)}
-            active={selectedEquipment.has(eq)}
-            onClick={() => setSelectedEquipment((s) => toggle(s, eq))}
-          />
-        ))}
-      </FilterRow>
+      {filtersOpen && (
+        <>
+          <FilterRow title="Muscle group">
+            {MAJORS.map((m) => (
+              <Chip
+                key={m.id}
+                label={m.name}
+                active={selectedMajors.has(m.id)}
+                onClick={() => setSelectedMajors((s) => toggle(s, m.id))}
+              />
+            ))}
+            <Chip label="Custom only" active={customOnly} onClick={() => setCustomOnly((c) => !c)} />
+            <Chip label="Favorites" active={favoritesOnly} onClick={() => setFavoritesOnly((f) => !f)} />
+          </FilterRow>
 
-      <FilterRow title="Level">
-        {LEVELS.map((lvl) => (
-          <Chip
-            key={lvl}
-            label={label(lvl)}
-            active={selectedLevels.has(lvl)}
-            onClick={() => setSelectedLevels((s) => toggle(s, lvl))}
-          />
-        ))}
-      </FilterRow>
+          <FilterRow title="Equipment">
+            {equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList).map((eq) => (
+              <Chip
+                key={eq}
+                label={label(eq)}
+                active={selectedEquipment.has(eq)}
+                onClick={() => setSelectedEquipment((s) => toggle(s, eq))}
+              />
+            ))}
+          </FilterRow>
 
-      <FilterRow title="Mechanic">
-        {MECHANICS.map((m) => (
-          <Chip
-            key={m}
-            label={label(m)}
-            active={selectedMechanics.has(m)}
-            onClick={() => setSelectedMechanics((s) => toggle(s, m))}
-          />
-        ))}
-      </FilterRow>
+          <FilterRow title="Level">
+            {LEVELS.map((lvl) => (
+              <Chip
+                key={lvl}
+                label={label(lvl)}
+                active={selectedLevels.has(lvl)}
+                onClick={() => setSelectedLevels((s) => toggle(s, lvl))}
+              />
+            ))}
+          </FilterRow>
 
-      <FilterRow title="Force">
-        {FORCES.map((f) => (
-          <Chip
-            key={f}
-            label={label(f)}
-            active={selectedForces.has(f)}
-            onClick={() => setSelectedForces((s) => toggle(s, f))}
-          />
-        ))}
-      </FilterRow>
+          <FilterRow title="Mechanic">
+            {MECHANICS.map((m) => (
+              <Chip
+                key={m}
+                label={label(m)}
+                active={selectedMechanics.has(m)}
+                onClick={() => setSelectedMechanics((s) => toggle(s, m))}
+              />
+            ))}
+          </FilterRow>
+
+          <FilterRow title="Force">
+            {FORCES.map((f) => (
+              <Chip
+                key={f}
+                label={label(f)}
+                active={selectedForces.has(f)}
+                onClick={() => setSelectedForces((s) => toggle(s, f))}
+              />
+            ))}
+          </FilterRow>
+        </>
+      )}
 
       <p className="sx-eyebrow sx-result-count">
         <span className="sx-num">{filtered.length}</span> of{' '}

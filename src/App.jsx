@@ -196,6 +196,8 @@ function AppShell() {
   const { state } = useStore()
   const [activeScreen, setActiveScreen] = useState('library')
   const [bodyMapFeed, setBodyMapFeed] = useState(EMPTY_BODY_MAP_FEED)
+  // Phones only: the body map is a collapsible strip (desktop always shows it).
+  const [mapOpen, setMapOpen] = useState(false)
   const screen = SCREENS.find((s) => s.id === activeScreen)
   const { Component } = screen
 
@@ -229,6 +231,17 @@ function AppShell() {
 
       <div className="sx-app-body">
         <div className="sx-layout">
+          {screen.hasBodyMap && (
+            <button
+              type="button"
+              className="sx-side-toggle"
+              aria-expanded={mapOpen}
+              onClick={() => setMapOpen((v) => !v)}
+            >
+              <span>Body map</span>
+              <span aria-hidden="true">{mapOpen ? '▴' : '▾'}</span>
+            </button>
+          )}
           <main className="sx-main">
             <div className="sx-content">
               <BodyMapFeedContext.Provider value={setBodyMapFeed}>
@@ -237,7 +250,7 @@ function AppShell() {
             </div>
           </main>
           {screen.hasBodyMap && (
-            <aside className="sx-side sx-side--active" aria-label="Body map">
+            <aside className={`sx-side sx-side--active${mapOpen ? '' : ' sx-side--collapsed'}`} aria-label="Body map">
               <BodyMap
                 view="front"
                 values={bodyMapFeed.front}
