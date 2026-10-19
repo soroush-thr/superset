@@ -1963,14 +1963,239 @@ button.sx-thumb {
   gap: 4px;
 }
 
+/* A set row is two lines: weight and reps steppers with the tick, then
+   one-tap RPE chips with the delete button under the tick. */
+.sx-set-head,
 .sx-set-row {
-  grid-template-columns: 20px 1fr 1fr 0.7fr 44px 24px;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 170px) minmax(0, 140px) 44px;
+  justify-content: space-between;
+  column-gap: 6px;
+  align-items: center;
 }
 
-.sx-set-row .sx-input {
-  min-height: 36px;
+.sx-set-head {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.sx-set-head span {
+  text-align: center;
+}
+
+.sx-set-head span:first-child {
+  text-align: left;
+}
+
+.sx-set-head-rpe {
+  display: none;
+}
+
+.sx-set-row {
+  grid-template-areas:
+    'idx weight reps tick'
+    '. rpe rpe del';
+  row-gap: 3px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sx-set-row:last-of-type {
+  border-bottom: none;
+}
+
+.sx-set-row > .sx-set-index { grid-area: idx; }
+.sx-set-row > .sx-set-weight { grid-area: weight; }
+.sx-set-row > .sx-set-reps { grid-area: reps; }
+.sx-set-row > .sx-set-tick { grid-area: tick; }
+.sx-set-row > .sx-set-rpe { grid-area: rpe; }
+.sx-set-row > :last-child:not(.sx-set-tick) { grid-area: del; }
+
+.sx-set-row-simple {
+  grid-template-areas: 'idx note note tick';
+}
+
+.sx-set-row-simple > .sx-helper-text {
+  grid-area: note;
+  margin: 0;
+}
+
+.sx-stepper {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  height: 34px;
+}
+
+.sx-stepper > button {
+  flex: 0 0 32px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  font-size: var(--fs-3);
+  line-height: 1;
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.sx-stepper > button:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.sx-stepper-value {
+  flex: 1 1 auto;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-3);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sx-stepper-value select {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 2px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  text-align-last: center;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.sx-stepper-value select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Pre-filled but not yet confirmed: still tappable, visibly a guess. */
+.sx-suggested .sx-stepper-value {
+  color: var(--text-dim);
+}
+
+.sx-set-row-done .sx-stepper-value {
+  border-color: var(--accent-dim);
+}
+
+.sx-set-tick {
+  height: 34px;
+}
+
+.sx-set-rpe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sx-set-rpe .sx-eyebrow {
+  font-size: 10px;
+  margin-right: 2px;
+  cursor: help;
+}
+
+.sx-rpe-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 36px;
+  min-height: 24px;
+  padding: 0;
+  font-size: var(--fs-1);
+  color: var(--text-dim);
+  background: var(--surface-2);
+}
+
+.sx-rpe-chip.sx-active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.sx-rest-pref {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.sx-rest-pref select {
+  min-height: 26px;
   padding: 0 4px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: var(--fs-1);
+}
+
+.sx-rest-adjust {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: var(--fs-1);
+}
+
+.sx-owned-weights {
+  margin-top: 8px;
+}
+
+.sx-owned-weights summary {
+  cursor: pointer;
+  font-size: var(--fs-2);
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.sx-chip-weight {
+  min-width: 44px;
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.sx-owned-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sx-owned-actions .sx-helper-text {
+  margin: 0;
+}
+
+.sx-gen-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sx-gen-tweaks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.sx-gen-tweaks .sx-stepper {
+  flex: 0 1 150px;
+  height: 34px;
+}
+
+.sx-gen-tweaks .sx-stepper-value {
+  font-size: var(--fs-2);
+}
+
+.sx-gen-times {
+  color: var(--text-faint);
 }
 
 .sx-set-tick {
@@ -1999,4 +2224,99 @@ button.sx-thumb {
   border-style: dashed;
   color: var(--text-dim);
   font-size: var(--fs-2);
+}
+
+/* Wide cards (desktop, or one card per row): everything for a set on one
+   line, steppers at a fixed size instead of stretching across the card. */
+.sx-session-entry {
+  container-type: inline-size;
+}
+
+@container (min-width: 480px) {
+  .sx-set-head,
+  .sx-set-row {
+    grid-template-columns: 14px 132px 108px 142px 36px 16px;
+    justify-content: start;
+    column-gap: 6px;
+  }
+
+  .sx-stepper > button {
+    flex-basis: 30px;
+  }
+
+  .sx-set-rpe {
+    gap: 3px;
+  }
+
+  .sx-set-row {
+    grid-template-areas: 'idx weight reps rpe tick del';
+  }
+
+  .sx-set-row-simple {
+    grid-template-areas: 'idx note note note tick del';
+  }
+
+  .sx-set-head-rpe {
+    display: block;
+  }
+
+  .sx-set-rpe .sx-eyebrow {
+    display: none;
+  }
+
+  .sx-rpe-chip {
+    min-height: 30px;
+  }
+
+  .sx-set-row {
+    padding-bottom: 3px;
+  }
+}
+
+.sx-session-history-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sx-session-history-item {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.sx-session-history-item .sx-session-history-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-bottom: none;
+}
+
+.sx-danger-link {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.sx-danger {
+  margin-top: 16px;
+  border-color: var(--over);
+  color: var(--over);
+}
+
+/* These sit in fixed-width grid cells; the global 40px button minimum
+   would push them past their column. */
+.sx-set-tick,
+.sx-set-remove,
+.sx-rest-adjust {
+  min-width: 0;
+}
+
+/* An armed ConfirmButton: the second tap does it. */
+.sx-armed,
+.sx-armed:hover {
+  border-color: var(--over);
+  color: var(--over);
+}
+
+.sx-entry-remove.sx-armed,
+.sx-link-button.sx-armed {
+  font-size: var(--fs-1);
+  white-space: nowrap;
 }

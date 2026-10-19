@@ -1,47 +1,88 @@
-import React, { useEffect, useState } from 'react'
-import { toDisplay, fromDisplay, formatWeight } from '../../lib/units.js'
+import React, { useState } from 'react'
+import { formatWeight } from '../../lib/units.js'
 import { suggestNextLoad } from '../../lib/progression.js'
+import { weightOptionsKg, weightLabel, nearestIndex, sameWeight, isBodyweight } from '../../lib/weights.js'
+import Stepper from '../ui/Stepper.jsx'
+
+const RPE_CHOICES = [6, 7, 8, 9, 10]
 
 /**
- * One entry's sets as a compact checklist: a row per planned set with
- * weight, reps and a big tick. Ticking a set fills any blank weight/reps
- * from the previous set (or last session, or the target), copies the weight
- * to the rows below, and starts the rest timer. Planned entries have a fixed
- * number of rows; ad-hoc entries can add more. `previousSession` (the
- * { session, entry, sets } shape from lastSessionFor) drives the dismissible
+ * One entry's sets as a tap-first checklist. Each row shows a weight and
+ * reps that are already filled in (from the previous set, last session, or
+ * the target -- shown faint until confirmed), so logging is: nudge with
+ * − / + or pick from the weight dropdown if anything changed, tap an RPE,
+ * tick. Ticking commits the shown values, copies the weight to the rows
+ * below, and starts the rest timer. The weight dropdown offers the sizes
+ * you own for dumbbells/kettlebells (settings.ownedWeights), else sensible
+ * increments. Planned entries have a fixed number of rows; ad-hoc entries
+ * can add more. `previousSession` (lastSessionFor's shape) drives the
  * "bump the weight" hint.
  */
-export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged, previousSession }) {
+export default function SetGrid({
+  sessionId,
+  entry,
+  exercise,
+  unit,
+  ownedWeights,
+  dispatch,
+  onSetLogged,
+  onRpeChanged,
+  previousSession,
+}) {
   const [hintDismissed, setHintDismissed] = useState(false)
   const suggestion = hintDismissed ? null : suggestNextLoad(previousSession, entry.targetRepMax, unit)
-  // A planned entry has a fixed number of sets; ad-hoc entries are open-ended.
   const canAdd = entry.targetSets == null || entry.sets.length < entry.targetSets
-  const repsLabel = entry.targetUnit === 'sec' ? 'sec' : 'reps'
-  const repsPlaceholder =
-    entry.targetRepMin != null && entry.targetRepMax != null
-      ? entry.targetRepMin === entry.targetRepMax
-        ? String(entry.targetRepMin)
-        : `${entry.targetRepMin}-${entry.targetRepMax}`
-      : repsLabel
+  const sec = entry.targetUnit === 'sec'
+  const cooldown = entry.kind === 'cooldown'
+  const equipment = exercise?.equipment
 
   const update = (setId, patch) => dispatch({ type: 'UPDATE_SET', sessionId, entryId: entry.id, setId, patch })
+
+  // What each row shows before the user touches it.
+  function suggested(index) {
+    const set = entry.sets[index]
+    const earlier = entry.sets.slice(0, index).reverse()
+    const fromLast = previousSession?.sets[index] ?? previousSession?.sets[previousSession.sets.length - 1]
+    const weightKg =
+      set.weightKg ??
+      earlier.find((s) => s.weightKg != null)?.weightKg ??
+      fromLast?.weightKg ??
+      null
+    const reps =
+      set.reps ??
+      earlier.find((s) => s.done && s.reps != null)?.reps ??
+      fromLast?.reps ??
+      entry.targetRepMax ??
+      (sec ? 30 : 10)
+    return { weightKg, reps }
+  }
 
   function toggleDone(set, index) {
     if (set.done) {
       update(set.id, { done: false })
       return
     }
-    const prev = [...entry.sets.slice(0, index)].reverse().find((s) => s.done)
-    const fromLast = previousSession?.sets[index] ?? previousSession?.sets[previousSession.sets.length - 1]
-    const weightKg = set.weightKg ?? prev?.weightKg ?? fromLast?.weightKg ?? null
-    const reps = set.reps ?? prev?.reps ?? fromLast?.reps ?? entry.targetRepMax ?? null
-    update(set.id, { done: true, weightKg, reps, ts: new Date().toISOString() })
+    const { weightKg, reps } = suggested(index)
+    const ts = new Date().toISOString()
+    update(set.id, { done: true, weightKg, reps, ts })
     if (weightKg != null) {
       for (const later of entry.sets.slice(index + 1)) {
         if (!later.done && later.weightKg == null) update(later.id, { weightKg })
       }
     }
-    onSetLogged?.()
+    onSetLogged?.({ ...set, done: true, weightKg, reps, ts })
+  }
+
+  function setWeight(set, index, weightKg) {
+    const before = suggested(index).weightKg
+    update(set.id, { weightKg })
+    // Carry the change down to later sets that were on the same weight
+    // (a planned drop or pyramid set keeps its own).
+    for (const later of entry.sets.slice(index + 1)) {
+      if (!later.done && (later.weightKg == null || sameWeight(later.weightKg, before))) {
+        update(later.id, { weightKg })
+      }
+    }
   }
 
   return (
@@ -55,20 +96,45 @@ export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged,
         </div>
       )}
 
-      {entry.sets.map((set, i) => (
-        <SetRow
-          key={set.id}
-          index={i}
-          set={set}
-          unit={unit}
-          repsLabel={repsLabel}
-          repsPlaceholder={repsPlaceholder}
-          removable={entry.targetSets == null || entry.sets.length > entry.targetSets}
-          onChange={(patch) => update(set.id, patch)}
-          onToggle={() => toggleDone(set, i)}
-          onDelete={() => dispatch({ type: 'DELETE_SET', sessionId, entryId: entry.id, setId: set.id })}
-        />
-      ))}
+      {!cooldown && entry.sets.length > 0 && (
+        <div className="sx-set-head sx-eyebrow" aria-hidden="true">
+          <span>Set</span>
+          <span>{isBodyweight(equipment) ? `Added ${unit}` : equipment === 'dumbbell' ? `${unit} each` : unit}</span>
+          <span>{sec ? 'Seconds' : 'Reps'}</span>
+          <span className="sx-set-head-rpe">RPE</span>
+          <span>Done</span>
+        </div>
+      )}
+
+      {entry.sets.map((set, i) =>
+        cooldown ? (
+          <div key={set.id} className={`sx-set-row sx-set-row-simple${set.done ? ' sx-set-row-done' : ''}`}>
+            <span className="sx-num sx-set-index">{i + 1}</span>
+            <span className="sx-helper-text">{entry.note || 'Hold the stretch'}</span>
+            <TickButton set={set} index={i} onClick={() => toggleDone(set, i)} />
+          </div>
+        ) : (
+          <SetRow
+            key={set.id}
+            index={i}
+            set={set}
+            shown={suggested(i)}
+            sec={sec}
+            unit={unit}
+            equipment={equipment}
+            ownedWeights={ownedWeights}
+            removable={entry.targetSets == null || entry.sets.length > entry.targetSets}
+            onWeight={(kg) => setWeight(set, i, kg)}
+            onReps={(reps) => update(set.id, { reps })}
+            onRpe={(rpe) => {
+              update(set.id, { rpe })
+              if (set.done) onRpeChanged?.({ ...set, rpe })
+            }}
+            onToggle={() => toggleDone(set, i)}
+            onDelete={() => dispatch({ type: 'DELETE_SET', sessionId, entryId: entry.id, setId: set.id })}
+          />
+        ),
+      )}
 
       {canAdd && (
         <button
@@ -93,63 +159,101 @@ export default function SetGrid({ sessionId, entry, unit, dispatch, onSetLogged,
   )
 }
 
-function SetRow({ index, set, unit, repsLabel, repsPlaceholder, removable, onChange, onToggle, onDelete }) {
-  const [weightText, setWeightText] = useState(() =>
-    set.weightKg == null ? '' : String(toDisplay(set.weightKg, unit)),
+function TickButton({ set, index, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`sx-set-tick${set.done ? ' sx-done' : ''}`}
+      aria-pressed={set.done}
+      aria-label={`Set ${index + 1} ${set.done ? 'done, tap to undo' : 'mark done'}`}
+      onClick={onClick}
+    >
+      ✓
+    </button>
   )
-  // Keep the field in step with changes made elsewhere (carry-forward, unit toggle).
-  useEffect(() => {
-    setWeightText(set.weightKg == null ? '' : String(Math.round(toDisplay(set.weightKg, unit) * 10) / 10))
-  }, [set.weightKg, unit])
+}
 
-  function commitWeight() {
-    const n = parseFloat(weightText)
-    onChange({ weightKg: Number.isFinite(n) ? fromDisplay(n, unit) : null })
+function SetRow({ index, set, shown, sec, unit, equipment, ownedWeights, removable, onWeight, onReps, onRpe, onToggle, onDelete }) {
+  const bodyweight = isBodyweight(equipment)
+  // Bodyweight moves default to "BW" (no added load) rather than blank.
+  const weightKg = shown.weightKg ?? (bodyweight ? 0 : null)
+  const options = weightOptionsKg(equipment, unit, ownedWeights, weightKg)
+  const at = weightKg == null ? -1 : options.findIndex((kg) => sameWeight(kg, weightKg))
+  const weightGuessed = set.weightKg == null && !set.done
+  const repsGuessed = set.reps == null && !set.done
+  const repStep = sec ? 5 : 1
+
+  function stepWeight(d) {
+    if (!options.length) return
+    let i
+    if (at < 0) {
+      // Nothing yet: start on a typical empty bar for barbells, else the lightest.
+      i = equipment === 'barbell' ? nearestIndex(options, unit === 'lb' ? 45 * 0.45359237 : 20) : 0
+    } else {
+      i = Math.min(options.length - 1, Math.max(0, at + d))
+    }
+    onWeight(options[i])
   }
 
   return (
     <div className={`sx-set-row${set.done ? ' sx-set-row-done' : ''}`}>
       <span className="sx-num sx-set-index">{index + 1}</span>
-      <input
-        className="sx-input sx-set-weight"
-        inputMode="decimal"
-        placeholder={unit}
-        aria-label={`Set ${index + 1} weight (${unit})`}
-        value={weightText}
-        onChange={(e) => setWeightText(e.target.value)}
-        onBlur={commitWeight}
-      />
-      <input
-        className="sx-input sx-set-reps"
-        inputMode="numeric"
-        placeholder={repsPlaceholder}
-        aria-label={`Set ${index + 1} ${repsLabel}`}
-        value={set.reps ?? ''}
-        onChange={(e) => {
-          const n = parseInt(e.target.value, 10)
-          onChange({ reps: Number.isFinite(n) ? n : null })
-        }}
-      />
-      <input
-        className="sx-input sx-set-rpe"
-        inputMode="decimal"
-        placeholder="RPE"
-        aria-label={`Set ${index + 1} RPE`}
-        value={set.rpe ?? ''}
-        onChange={(e) => {
-          const n = parseFloat(e.target.value)
-          onChange({ rpe: Number.isFinite(n) ? n : null })
-        }}
-      />
-      <button
-        type="button"
-        className={`sx-set-tick${set.done ? ' sx-done' : ''}`}
-        aria-pressed={set.done}
-        aria-label={`Set ${index + 1} ${set.done ? 'done, tap to undo' : 'mark done'}`}
-        onClick={onToggle}
+
+      <Stepper
+        label={`set ${index + 1} weight`}
+        className={`sx-set-weight${weightGuessed ? ' sx-suggested' : ''}`}
+        decDisabled={at === 0}
+        incDisabled={at === options.length - 1}
+        onDec={() => stepWeight(-1)}
+        onInc={() => stepWeight(1)}
       >
-        ✓
-      </button>
+        <select
+          aria-label={`Set ${index + 1} weight (${unit})`}
+          value={at < 0 ? '' : String(at)}
+          onChange={(e) => onWeight(e.target.value === '' ? null : options[Number(e.target.value)])}
+        >
+          {at < 0 && <option value="">–</option>}
+          {options.map((kg, i) => (
+            <option key={i} value={String(i)}>
+              {weightLabel(kg, unit, equipment)}
+            </option>
+          ))}
+        </select>
+      </Stepper>
+
+      <Stepper
+        label={`set ${index + 1} ${sec ? 'seconds' : 'reps'}`}
+        className={`sx-set-reps${repsGuessed ? ' sx-suggested' : ''}`}
+        decDisabled={shown.reps <= repStep}
+        onDec={() => onReps(Math.max(repStep, shown.reps - repStep))}
+        onInc={() => onReps(shown.reps + repStep)}
+      >
+        {shown.reps}
+      </Stepper>
+
+      <TickButton set={set} index={index} onClick={onToggle} />
+
+      <div className="sx-set-rpe" role="radiogroup" aria-label={`Set ${index + 1} RPE (effort)`}>
+        <span className="sx-eyebrow" title="Rate of perceived exertion: 10 = nothing left, 8 = two reps left">
+          RPE
+        </span>
+        {RPE_CHOICES.map((v) => {
+          const active = set.rpe != null && Math.round(set.rpe) === v
+          return (
+            <button
+              key={v}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              className={`sx-rpe-chip sx-num${active ? ' sx-active' : ''}`}
+              onClick={() => onRpe(active ? null : v)}
+            >
+              {v}
+            </button>
+          )
+        })}
+      </div>
+
       {removable ? (
         <button type="button" className="sx-set-remove" aria-label={`Delete set ${index + 1}`} onClick={onDelete}>
           &times;

@@ -7,7 +7,7 @@ function secondsLeft(restEndsAt) {
 
 /** Counts down from `restEndsAt`, an epoch-ms timestamp persisted on the
  *  session so the timer survives a tab switch or reload. */
-export default function RestTimer({ restEndsAt, onCancel }) {
+export default function RestTimer({ restEndsAt, onAdjust, onCancel }) {
   const [remaining, setRemaining] = useState(() => secondsLeft(restEndsAt))
 
   useEffect(() => {
@@ -31,8 +31,18 @@ export default function RestTimer({ restEndsAt, onCancel }) {
       <span className="sx-num sx-rest-timer-clock">
         {mm}:{ss}
       </span>
+      {onAdjust && (
+        <>
+          <button type="button" className="sx-rest-adjust" aria-label="15 seconds less rest" onClick={() => onAdjust(-15)}>
+            −15
+          </button>
+          <button type="button" className="sx-rest-adjust" aria-label="15 seconds more rest" onClick={() => onAdjust(15)}>
+            +15
+          </button>
+        </>
+      )}
       <button type="button" onClick={onCancel}>
-        Skip rest
+        Skip
       </button>
     </div>
   )

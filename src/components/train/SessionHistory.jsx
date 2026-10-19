@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import ConfirmButton from '../ui/ConfirmButton.jsx'
 import { useStore, useExercises } from '../../App.jsx'
 import { formatWeight } from '../../lib/units.js'
 import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
@@ -11,9 +12,11 @@ function formatDuration(startedAt, endedAt) {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
 
-/** A list of finished sessions, newest first; tap a row for full per-set detail. */
+/** A list of finished sessions, newest first; tap a row for full per-set
+ *  detail. Sessions (or single exercises in one) can be deleted so a
+ *  workout that didn't really happen stops counting as trained. */
 export default function SessionHistory() {
-  const { state } = useStore()
+  const { state, dispatch } = useStore()
   const { byId: exercisesById } = useExercises()
   const bodyKg = latestBodyKg(state.bodyLog) ?? DEFAULT_BODY_KG
   const [openSessionId, setOpenSessionId] = useState(null)
@@ -34,9 +37,9 @@ export default function SessionHistory() {
         const totalSets = session.entries.reduce((sum, e) => sum + e.sets.filter((s) => s.done).length, 0)
         const kcal = sessionKcal(session, exercisesById, bodyKg)
         return (
+          <div key={session.id} className="sx-session-history-item">
           <button
             type="button"
-            key={session.id}
             className="sx-session-history-row"
             onClick={() => setOpenSessionId(session.id)}
           >
@@ -52,6 +55,15 @@ export default function SessionHistory() {
               {totalSets} sets{kcal != null ? ` · ~${kcal} kcal` : ''}
             </span>
           </button>
+          <ConfirmButton
+            className="sx-entry-remove"
+            aria-label={`Delete ${session.dayName || 'session'}`}
+            confirmLabel="Delete?"
+            onConfirm={() => dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })}
+          >
+            &times;
+          </ConfirmButton>
+          </div>
         )
       })}
 
@@ -61,7 +73,7 @@ export default function SessionHistory() {
 }
 
 function SessionDetail({ session, open, onClose }) {
-  const { state } = useStore()
+  const { state, dispatch } = useStore()
   const { byId: exercisesById } = useExercises()
   const unit = state.settings.unit ?? 'kg'
   const loggedKg = latestBodyKg(state.bodyLog)
@@ -98,6 +110,14 @@ function SessionDetail({ session, open, onClose }) {
             <div className="sx-entry-top">
               <ExerciseThumb exercise={exercisesById[entry.exerciseId]} size="sm" />
               <span className="sx-entry-name">{exercisesById[entry.exerciseId]?.name ?? entry.exerciseId}</span>
+              <ConfirmButton
+                className="sx-link-button sx-danger-link"
+                confirmLabel="Tap to remove"
+                skip={doneSets.length === 0}
+                onConfirm={() => dispatch({ type: 'DELETE_SESSION_ENTRY', sessionId: session.id, entryId: entry.id })}
+              >
+                Remove
+              </ConfirmButton>
             </div>
             {doneSets.length === 0 ? (
               <p className="sx-empty-state">No sets logged.</p>
@@ -117,6 +137,17 @@ function SessionDetail({ session, open, onClose }) {
           </div>
         )
       })}
+
+      <ConfirmButton
+        className="sx-danger"
+        confirmLabel="Tap again to delete — its sets stop counting as trained"
+        onConfirm={() => {
+          dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })
+          onClose()
+        }}
+      >
+        Delete this workout
+      </ConfirmButton>
     </Drawer>
   )
 }

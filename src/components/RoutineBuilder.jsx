@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import ConfirmButton from './ui/ConfirmButton.jsx'
 import ExerciseThumb from './ui/ExerciseThumb.jsx'
 import { useStore, useBodyMapFeed, useExercises } from '../App.jsx'
 import { weeklyVolume, substitutesFor } from '../lib/coverage.js'
@@ -169,16 +170,12 @@ function RoutineSelector({ state, dispatch, routine }) {
           >
             Duplicate
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm(`Delete "${routine.name}"? This cannot be undone.`)) {
-                dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id })
-              }
-            }}
+          <ConfirmButton
+            confirmLabel="Tap to delete"
+            onConfirm={() => dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id })}
           >
             Delete
-          </button>
+          </ConfirmButton>
           <button type="button" onClick={printWithImages}>
             Print
           </button>
@@ -384,16 +381,12 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
         >
           &darr;
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (window.confirm(`Delete "${day.name}"?`)) {
-              dispatch({ type: 'DELETE_DAY', routineId: routine.id, dayId: day.id })
-            }
-          }}
+        <ConfirmButton
+          confirmLabel="Tap to delete"
+          onConfirm={() => dispatch({ type: 'DELETE_DAY', routineId: routine.id, dayId: day.id })}
         >
           Delete
-        </button>
+        </ConfirmButton>
       </div>
 
       <div

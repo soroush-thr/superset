@@ -36,6 +36,8 @@ function emptyState() {
       creditMode: 'peak',
       unit: 'kg', // 'kg' | 'lb', display only -- weights are always stored in kg
       targets: {}, // only user overrides live here; defaults are seeded at read time (5.2)
+      restPref: 'auto', // 'auto' (scaled by load) or a fixed number of seconds between sets
+      ownedWeights: {}, // { dumbbell: [kg...], kettlebells: [kg...] }; empty = any weight
     },
     routines: [],
     activeRoutineId: null,

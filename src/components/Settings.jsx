@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react'
+import ConfirmButton from './ui/ConfirmButton.jsx'
 import { useStore } from '../App.jsx'
 import { serialize, deserialize, targetsWithDefaults, flushSave } from '../lib/store.js'
 import { SUBGROUPS, MAJORS, subgroupName } from '../lib/taxonomy.js'
@@ -7,6 +8,9 @@ import { BUILTIN_EXERCISES } from '../lib/exercises.js'
 import taxonomyData from '../data/taxonomy.json'
 import NumberField from './ui/NumberField.jsx'
 import Segmented from './ui/Segmented.jsx'
+import OwnedWeights from './ui/OwnedWeights.jsx'
+import { REST_CHOICES, restPrefOf } from '../lib/rest.js'
+import { OWNABLE_EQUIPMENT } from '../lib/weights.js'
 
 const LEVELS = ['beginner', 'intermediate', 'expert']
 
@@ -26,6 +30,7 @@ export default function Settings() {
   const { state, dispatch } = useStore()
   const fileInputRef = useRef(null)
   const [importError, setImportError] = useState(null)
+  const [pendingImport, setPendingImport] = useState(null)
 
   function toggleEquipment(profileName, equipment) {
     const current = state.settings.equipmentProfiles[profileName]
@@ -57,16 +62,7 @@ export default function Settings() {
     const reader = new FileReader()
     reader.onload = () => {
       try {
-        const parsed = deserialize(reader.result)
-        const count = parsed.routines?.length ?? 0
-        const ok = window.confirm(
-          `Import will replace all current data with the imported file, overwriting ` +
-            `${state.routines.length} existing routine${state.routines.length === 1 ? '' : 's'} ` +
-            `with ${count} imported routine${count === 1 ? '' : 's'}. Continue?`,
-        )
-        if (!ok) return
-        dispatch({ type: 'REPLACE_STATE', state: parsed })
-        flushSave(parsed)
+        setPendingImport(deserialize(reader.result))
         setImportError(null)
       } catch (err) {
         setImportError(err.message)
@@ -75,10 +71,10 @@ export default function Settings() {
     reader.readAsText(file)
   }
 
-  function handleReset() {
-    if (window.confirm('Reset all settings to defaults? Routines are not affected.')) {
-      dispatch({ type: 'RESET_SETTINGS' })
-    }
+  function applyImport() {
+    dispatch({ type: 'REPLACE_STATE', state: pendingImport })
+    flushSave(pendingImport)
+    setPendingImport(null)
   }
 
   const targets = targetsWithDefaults(state)
@@ -110,6 +106,32 @@ export default function Settings() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Your weights">
+        <p className="sx-helper-text">
+          Pick the dumbbells and kettlebells you own and the weight picker while logging offers only those.
+        </p>
+        {OWNABLE_EQUIPMENT.map((eq) => (
+          <OwnedWeights
+            key={eq}
+            equipment={eq}
+            unit={state.settings.unit ?? 'kg'}
+            ownedWeights={state.settings.ownedWeights}
+            onChange={(ownedWeights) => dispatch({ type: 'UPDATE_SETTINGS', patch: { ownedWeights } })}
+          />
+        ))}
+      </Section>
+
+      <Section title="Rest between sets">
+        <Segmented
+          value={restPrefOf(state.settings)}
+          onChange={(v) => dispatch({ type: 'UPDATE_SETTINGS', patch: { restPref: v } })}
+          options={REST_CHOICES}
+        />
+        <p className="sx-helper-text">
+          Auto scales the rest with the load: longer after heavy, low-rep or hard (high RPE) sets, shorter after light ones.
+        </p>
       </Section>
 
       <Section title="Max level">
@@ -190,11 +212,31 @@ export default function Settings() {
             style={{ display: 'none' }}
             onChange={handleImportFile}
           />
-          <button type="button" onClick={handleReset}>
+          <ConfirmButton
+            confirmLabel="Tap again to reset (routines are kept)"
+            onConfirm={() => dispatch({ type: 'RESET_SETTINGS' })}
+          >
             Reset settings to defaults
-          </button>
+          </ConfirmButton>
         </div>
         {importError && <p className="sx-import-error">Import failed: {importError}</p>}
+        {pendingImport && (
+          <div className="sx-import-confirm" role="alert">
+            <p className="sx-helper-text">
+              Import replaces all current data, overwriting {state.routines.length} existing routine
+              {state.routines.length === 1 ? '' : 's'} with {pendingImport.routines?.length ?? 0} imported routine
+              {(pendingImport.routines?.length ?? 0) === 1 ? '' : 's'}.
+            </p>
+            <div className="sx-data-actions">
+              <button type="button" className="sx-primary" onClick={applyImport}>
+                Replace my data
+              </button>
+              <button type="button" onClick={() => setPendingImport(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
       </Section>
 
       <Section title="Provenance">

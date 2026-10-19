@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import ConfirmButton from './ui/ConfirmButton.jsx'
 import Drawer from './ui/Drawer.jsx'
 import BodyMap from './BodyMap.jsx'
 import ExerciseThumb from './ui/ExerciseThumb.jsx'
@@ -47,10 +48,8 @@ export default function ExerciseDetail({ exercise, open, onClose, onSelectExerci
   const previewValues = peakNormalize(exercise.sub)
 
   function handleDelete() {
-    if (window.confirm(`Delete "${exercise.name}"? Routines and history that reference it keep working.`)) {
-      dispatch({ type: 'DELETE_CUSTOM_EXERCISE', exerciseId: exercise.id })
-      onClose()
-    }
+    dispatch({ type: 'DELETE_CUSTOM_EXERCISE', exerciseId: exercise.id })
+    onClose()
   }
 
   return (
@@ -118,9 +117,9 @@ export default function ExerciseDetail({ exercise, open, onClose, onSelectExerci
       )}
 
       {exercise.custom && (
-        <button type="button" onClick={handleDelete}>
+        <ConfirmButton confirmLabel="Tap again (routines and history keep working)" onConfirm={handleDelete}>
           Delete custom exercise
-        </button>
+        </ConfirmButton>
       )}
     </Drawer>
   )

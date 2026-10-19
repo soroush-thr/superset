@@ -12,8 +12,16 @@ import {
   estimateSeconds,
   generatorSettingsWithDefaults,
   swapExercise,
+  editItem,
+  removeItem,
+  applyRest,
 } from '../../lib/generator.js'
+import { REST_CHOICES, restPrefOf } from '../../lib/rest.js'
+import { OWNABLE_EQUIPMENT } from '../../lib/weights.js'
+import { lastSessionFor } from '../../lib/sessions.js'
 import Chip from '../ui/Chip.jsx'
+import Stepper from '../ui/Stepper.jsx'
+import OwnedWeights from '../ui/OwnedWeights.jsx'
 import Segmented from '../ui/Segmented.jsx'
 import NumberField from '../ui/NumberField.jsx'
 import ExerciseThumb from '../ui/ExerciseThumb.jsx'
@@ -97,10 +105,25 @@ export default function Generate({ onStarted }) {
     set({ type, majors: type === 'full' ? FULL_BODY_MAJORS : [], excludeSubs: [] })
   }
 
+  const restPref = restPrefOf(state.settings)
+  const unit = state.settings.unit ?? 'kg'
+
   function generate() {
     setSaved(false)
-    setWorkout(generateWorkout(form, ctx, randomSeed()))
+    setWorkout(generateWorkout({ ...form, restPref }, ctx, randomSeed()))
     dispatch({ type: 'UPDATE_SETTINGS', patch: { generator: form } })
+  }
+
+  function setRest(v) {
+    dispatch({ type: 'UPDATE_SETTINGS', patch: { restPref: v } })
+    if (workout) setWorkout((w) => applyRest(w, v))
+  }
+
+  // Calories assume the heaviest weight logged last time for each move.
+  const weightFor = (exerciseId) => {
+    const last = lastSessionFor(state.sessions, exerciseId)
+    const weights = last ? last.sets.map((s) => s.weightKg).filter((w) => w != null) : []
+    return weights.length ? Math.max(...weights) : null
   }
 
   const equipmentOptions = allEquipment(state.customExercises)
@@ -170,6 +193,15 @@ export default function Generate({ onStarted }) {
             <Chip label="pull-up bar" active={form.hasBar} onClick={() => set({ hasBar: !form.hasBar })} />
             <Chip label="bench" active={form.hasBench} onClick={() => set({ hasBench: !form.hasBench })} />
           </div>
+          {OWNABLE_EQUIPMENT.filter((eq) => form.equipment.includes(eq)).map((eq) => (
+            <OwnedWeights
+              key={eq}
+              equipment={eq}
+              unit={unit}
+              ownedWeights={state.settings.ownedWeights}
+              onChange={(ownedWeights) => dispatch({ type: 'UPDATE_SETTINGS', patch: { ownedWeights } })}
+            />
+          ))}
         </div>
 
         <div className="sx-field">
@@ -180,6 +212,16 @@ export default function Generate({ onStarted }) {
         <div className="sx-field">
           <span className="sx-eyebrow">Goal</span>
           <Segmented value={form.goal} onChange={(goal) => set({ goal })} options={GOAL_OPTIONS} />
+        </div>
+
+        <div className="sx-field">
+          <span className="sx-eyebrow">Rest between sets</span>
+          <Segmented value={restPref} onChange={setRest} options={REST_CHOICES} />
+          <p className="sx-helper-text">
+            {restPref === 'auto'
+              ? 'Auto: longer after heavy, low-rep lifts, shorter after light isolation work.'
+              : `Every set gets ${restPref} s.`}
+          </p>
         </div>
 
         <div className="sx-field sx-gen-limits">
@@ -252,7 +294,15 @@ export default function Generate({ onStarted }) {
           bodyKg={latestBodyKg(state.bodyLog)}
           byId={byId}
           onOpenDetail={setDetailId}
-          ctx={ctx}
+          weightFor={weightFor}
+          onEdit={(i, patch) => {
+            setSaved(false)
+            setWorkout((w) => editItem(w, i, patch))
+          }}
+          onRemove={(i) => {
+            setSaved(false)
+            setWorkout((w) => removeItem(w, i))
+          }}
           onSwap={(i) => {
             setSaved(false)
             setWorkout((w) => swapExercise(w, i, ctx, randomSeed()))
@@ -290,6 +340,9 @@ function Preview({
   bodyKg,
   byId,
   onOpenDetail,
+  weightFor,
+  onEdit,
+  onRemove,
   onSwap,
   onReroll,
   canStart,
@@ -304,6 +357,8 @@ function Preview({
   const limit = params.durationMin ?? (params.moves ? null : 45)
   const kcal = plannedKcal(workout.items, estimateSeconds(workout.items), bodyKg ?? DEFAULT_BODY_KG, {
     warmup: params.warmup,
+    byId,
+    weightFor,
   })
 
   if (workout.items.length === 0) {
@@ -339,7 +394,9 @@ function Preview({
       ))}
 
       <p className="sx-helper-text">
-        Calories are a rough estimate (±25%), based on {bodyKg ? 'your latest logged body weight' : `an assumed ${DEFAULT_BODY_KG} kg body weight (log yours in Progress for a better number)`}.
+        Calories are a rough estimate (±25%) from the sets, reps and your last logged weights, using{' '}
+        {bodyKg ? 'your latest logged body weight' : `an assumed ${DEFAULT_BODY_KG} kg body weight (log yours in Progress for a better number)`}.
+        During the session it updates from what you actually lift. Tap − / + below to adjust sets and reps.
       </p>
 
       {workout.warmupNote && <p className="sx-helper-text">{workout.warmupNote}</p>}
@@ -358,15 +415,26 @@ function Preview({
                   {ex?.name ?? it.exerciseId}
                 </span>
                 <span className="sx-entry-meta sx-num">
-                  {it.sets} × {it.repMin}-{it.repMax} {it.unit === 'sec' ? 'sec' : 'reps'} · rest {it.restSec}s
-                  {ex ? ` · ${ex.equipment}` : ''}
+                  rest {it.restSec}s{ex ? ` · ${ex.equipment}` : ''}
                 </span>
                 {ex && <span className="sx-entry-meta">{muscleSummary(ex.sub, 3)}</span>}
               </div>
-              <button type="button" onClick={() => onSwap(i)}>
-                Swap
-              </button>
+              <div className="sx-gen-item-actions">
+                <button type="button" onClick={() => onSwap(i)}>
+                  Swap
+                </button>
+                <button
+                  type="button"
+                  className="sx-entry-remove"
+                  aria-label={`Remove ${ex?.name ?? 'exercise'}`}
+                  disabled={workout.items.length <= 1}
+                  onClick={() => onRemove(i)}
+                >
+                  &times;
+                </button>
+              </div>
             </div>
+            <ItemTweaks item={it} onEdit={(patch) => onEdit(i, patch)} />
           </div>
         )
       })}
@@ -403,6 +471,41 @@ function Preview({
           </span>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Sets and reps for one planned move, changed a tap at a time. Reps move
+ *  the whole range (8-12 -> 9-13); holds move in 5 s steps. */
+function ItemTweaks({ item, onEdit }) {
+  const sec = item.unit === 'sec'
+  const step = sec ? 5 : 1
+  const shift = (d) => {
+    const repMin = Math.max(sec ? 10 : 1, item.repMin + d)
+    onEdit({ repMin, repMax: Math.max(repMin, item.repMax + (repMin - item.repMin)) })
+  }
+  const reps = item.repMin === item.repMax ? `${item.repMin}` : `${item.repMin}-${item.repMax}`
+  return (
+    <div className="sx-gen-tweaks">
+      <Stepper
+        label="sets"
+        decDisabled={item.sets <= 1}
+        incDisabled={item.sets >= 10}
+        onDec={() => onEdit({ sets: item.sets - 1 })}
+        onInc={() => onEdit({ sets: item.sets + 1 })}
+      >
+        {item.sets} sets
+      </Stepper>
+      <span className="sx-gen-times">×</span>
+      <Stepper
+        label={sec ? 'seconds' : 'reps'}
+        decDisabled={item.repMin <= (sec ? 10 : 1)}
+        incDisabled={item.repMax >= (sec ? 180 : 50)}
+        onDec={() => shift(-step)}
+        onInc={() => shift(step)}
+      >
+        {reps} {sec ? 's' : 'reps'}
+      </Stepper>
     </div>
   )
 }

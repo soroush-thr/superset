@@ -60,22 +60,25 @@ export function generatorSettingsWithDefaults(saved, settings = {}) {
 // Reps follow the load: heavy barbell/machine compounds sit lowest, other
 // compounds (dumbbell, bodyweight, bands) a notch higher, isolation highest.
 // Ranges are kept tight (about 2-4 reps wide) so each one is a clear target.
+// Rests are the "auto" defaults and scale with the load: long enough to
+// recover for the next set, not so long the session drags. A fixed rest
+// from settings.restPref replaces them.
 const PRESETS = {
   strength: {
-    heavy: { reps: [4, 6], rest: 150, sets: 4 },
-    comp: { reps: [6, 8], rest: 120, sets: 4 },
-    iso: { reps: [8, 10], rest: 75, sets: 3 },
+    heavy: { reps: [4, 6], rest: 120, sets: 4 },
+    comp: { reps: [6, 8], rest: 90, sets: 4 },
+    iso: { reps: [8, 10], rest: 60, sets: 3 },
     minRest: 60,
   },
   hypertrophy: {
-    heavy: { reps: [6, 8], rest: 120, sets: 3 },
-    comp: { reps: [8, 12], rest: 90, sets: 3 },
-    iso: { reps: [12, 15], rest: 60, sets: 3 },
-    minRest: 45,
+    heavy: { reps: [6, 8], rest: 90, sets: 3 },
+    comp: { reps: [8, 12], rest: 75, sets: 3 },
+    iso: { reps: [12, 15], rest: 45, sets: 3 },
+    minRest: 40,
   },
   endurance: {
-    heavy: { reps: [12, 15], rest: 60, sets: 3 },
-    comp: { reps: [12, 15], rest: 45, sets: 3 },
+    heavy: { reps: [12, 15], rest: 45, sets: 3 },
+    comp: { reps: [12, 15], rest: 30, sets: 3 },
     iso: { reps: [15, 20], rest: 30, sets: 3 },
     minRest: 20,
   },
@@ -84,8 +87,13 @@ const HEAVY_EQUIPMENT = new Set(['barbell', 'machine'])
 // Holds are prescribed in seconds, not reps.
 const ISOMETRIC_NAME = /plank|side bridge|wall sit|hollow hold|l-sit/i
 
-const WORK_SEC = 40 // time under load per set, incl. a little fumbling
-const SETUP_SEC = 60 // per exercise: walk over, set up, first-set prep
+// Time per set: about 3 s a rep plus ~10 s to get into position and rack
+// it; one-sided moves do every rep twice. Holds are their seconds plus setup.
+const SEC_PER_REP = 3
+const SET_OVERHEAD_SEC = 10
+const AVG_WORK_SEC = 40 // a 10-rep set, used when sizing a workout from time
+const SETUP_SEC = 45 // per exercise: walk over, load it, first-set prep
+const UNILATERAL_NAME = /one[- ]arm|single[- ](arm|leg)|one[- ]leg|alternat|lunge|split squat|step-?up|bulgarian/i
 const WARMUP_SEC = 600 // 5 min warm-up + 5 min cooldown
 const DEFAULT_DURATION_MIN = 45
 const MIN_MOVES = 1
@@ -514,7 +522,28 @@ function prescribe(meta, params, index = 0) {
     restSec = Math.min(restSec, 45)
     unit = 'sec'
   }
-  return { exerciseId: meta.ex.id, sets, repMin, repMax, unit, restSec, pairId: null, pattern: meta.pattern, compound: meta.compound }
+  const autoRestSec = restSec
+  if (typeof params.restPref === 'number') restSec = params.restPref
+  return {
+    exerciseId: meta.ex.id,
+    sets,
+    repMin,
+    repMax,
+    unit,
+    restSec,
+    autoRestSec,
+    pairId: null,
+    pattern: meta.pattern,
+    compound: meta.compound,
+    unilateral: UNILATERAL_NAME.test(meta.ex.name),
+  }
+}
+
+/** Seconds of work in one set of an item (see SEC_PER_REP). */
+export function workSecFor(it) {
+  const mid = ((it.repMin ?? 10) + (it.repMax ?? it.repMin ?? 10)) / 2
+  if (it.unit === 'sec') return mid + SET_OVERHEAD_SEC
+  return mid * SEC_PER_REP * (it.unilateral ? 2 : 1) + SET_OVERHEAD_SEC
 }
 
 /** Estimated session length in seconds: per set, work plus rest (the last
@@ -531,9 +560,9 @@ export function estimateSeconds(items, { warmup = false } = {}) {
       seen.add(partner)
       const s = Math.min(it.sets, partner.sets)
       const rest = Math.max(it.restSec, partner.restSec)
-      t += s * (WORK_SEC * 2 + rest) - rest + SETUP_SEC * 1.5
+      t += s * (workSecFor(it) + workSecFor(partner) + rest) - rest + SETUP_SEC * 1.5
     } else {
-      t += it.sets * (WORK_SEC + it.restSec) - it.restSec + SETUP_SEC
+      t += it.sets * (workSecFor(it) + it.restSec) - it.restSec + SETUP_SEC
     }
   }
   return t + (warmup ? WARMUP_SEC : 0)
@@ -541,8 +570,8 @@ export function estimateSeconds(items, { warmup = false } = {}) {
 
 function movesFromTime(durationMin, params) {
   const preset = PRESETS[params.goal] || PRESETS.hypertrophy
-  const restSec = (preset.comp.rest + preset.iso.rest) / 2
-  const perExercise = preset.comp.sets * (WORK_SEC + restSec) - restSec + SETUP_SEC
+  const restSec = typeof params.restPref === 'number' ? params.restPref : (preset.comp.rest + preset.iso.rest) / 2
+  const perExercise = preset.comp.sets * (AVG_WORK_SEC + restSec) - restSec + SETUP_SEC
   const budget = durationMin * 60 - (params.warmup ? WARMUP_SEC : 0)
   const n = Math.round((budget / perExercise) * (params.supersets ? 1.25 : 1))
   return Math.min(MAX_MOVES, Math.max(3, n))
@@ -614,7 +643,8 @@ function fitToTime(items, budgetSec, params) {
 
   if (est() > budgetSec) {
     shrinkSets(floorA)
-    shrinkRest()
+    // A rest the user fixed is theirs; only auto rests get squeezed.
+    if (typeof params.restPref !== 'number') shrinkRest()
     if (params.supersets) pairUp()
     shrinkSets(() => 2)
     return { items, overBudget: est() > budgetSec }
@@ -884,12 +914,52 @@ export function swapExercise(workout, index, ctx, seed) {
   const items = workout.items.map((it) => ({ ...it }))
   if (old.pairId) for (const it of items) if (it.pairId === old.pairId) it.pairId = null
   const fresh = prescribe(pick, params, index)
-  items[index] = { ...fresh, sets: old.sets }
+  items[index] = { ...fresh, sets: old.sets, restSec: old.restSec === old.autoRestSec ? fresh.restSec : old.restSec }
 
+  return retime({ ...workout, items })
+}
+
+/** Recompute the time estimate and time warning after an edit. */
+function retime(workout) {
+  const { params } = workout
+  const limit = params.durationMin ?? (params.moves ? null : DEFAULT_DURATION_MIN)
   return {
     ...workout,
-    items,
-    estMin: Math.round(estimateSeconds(items, { warmup: params.warmup }) / 60),
-    warnings: [...workout.warnings.filter((w) => w.kind !== 'time'), ...timeWarnings(items, params)],
+    estMin: Math.round(estimateSeconds(workout.items, { warmup: params.warmup }) / 60),
+    warnings: [...workout.warnings.filter((w) => w.kind !== 'time'), ...timeWarnings(workout.items, { ...params, durationMin: limit })],
   }
+}
+
+/**
+ * Tweak one item of a generated workout: `patch` may set `sets`, `repMin`,
+ * `repMax` or `restSec`. Superset partners keep the same number of sets.
+ */
+export function editItem(workout, index, patch) {
+  const old = workout.items[index]
+  if (!old) return workout
+  const items = workout.items.map((it, i) => {
+    if (i === index) return { ...it, ...patch }
+    if (patch.sets != null && old.pairId && it.pairId === old.pairId) return { ...it, sets: patch.sets }
+    return it
+  })
+  return retime({ ...workout, items })
+}
+
+/** Drop one item; its superset partner (if any) becomes a straight set. */
+export function removeItem(workout, index) {
+  const old = workout.items[index]
+  if (!old) return workout
+  const items = workout.items
+    .filter((_, i) => i !== index)
+    .map((it) => (old.pairId && it.pairId === old.pairId ? { ...it, pairId: null } : it))
+  return retime({ ...workout, items })
+}
+
+/** Re-apply a rest preference ('auto' or seconds) to every item. */
+export function applyRest(workout, restPref) {
+  const items = workout.items.map((it) => ({
+    ...it,
+    restSec: typeof restPref === 'number' ? restPref : it.autoRestSec ?? it.restSec,
+  }))
+  return retime({ ...workout, items, params: { ...workout.params, restPref } })
 }

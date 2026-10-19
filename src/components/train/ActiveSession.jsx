@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import ConfirmButton from '../ui/ConfirmButton.jsx'
 import { useStore, useBodyMapFeed, useExercises } from '../../App.jsx'
 import { volumeForEntries } from '../../lib/coverage.js'
 import { lastSessionFor } from '../../lib/sessions.js'
 import { formatWeight } from '../../lib/units.js'
 import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
 import { useWakeLock } from '../../lib/hooks.js'
+import { REST_CHOICES, restAfterSet, restPrefOf } from '../../lib/rest.js'
 import SetGrid from './SetGrid.jsx'
 import RestTimer from './RestTimer.jsx'
 import ExerciseThumb from '../ui/ExerciseThumb.jsx'
 import ExerciseDetail from '../ExerciseDetail.jsx'
-
-const DEFAULT_REST_SEC = 90
 
 function formatElapsed(ms) {
   const total = Math.max(0, Math.floor(ms / 1000))
@@ -92,6 +92,7 @@ export default function ActiveSession() {
         doneSets={doneSets}
         totalSets={totalSets}
         kcal={kcal}
+        restPref={restPrefOf(state.settings)}
       />
 
       {session.entries.length === 0 ? (
@@ -114,6 +115,8 @@ export default function ActiveSession() {
                 current={entry.id === currentId}
                 exercise={exercisesById[entry.exerciseId]}
                 unit={unit}
+                ownedWeights={state.settings.ownedWeights}
+                restPref={restPrefOf(state.settings)}
                 dispatch={dispatch}
                 allSessions={state.sessions}
                 onOpenDetail={() => setDetailId(entry.exerciseId)}
@@ -168,7 +171,7 @@ function StartSession({ state, dispatch }) {
   )
 }
 
-function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal }) {
+function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal, restPref }) {
   const pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0
   return (
     <div className="sx-session-bar">
@@ -180,6 +183,24 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal })
             {kcal != null ? ` · ~${kcal} kcal` : ''}
             {` · ${doneSets}/${totalSets} sets`}
           </span>
+          <label className="sx-rest-pref">
+            <span className="sx-eyebrow">Rest</span>
+            <select
+              value={String(restPref)}
+              onChange={(e) =>
+                dispatch({
+                  type: 'UPDATE_SETTINGS',
+                  patch: { restPref: e.target.value === 'auto' ? 'auto' : Number(e.target.value) },
+                })
+              }
+            >
+              {REST_CHOICES.map((c) => (
+                <option key={c.value} value={String(c.value)}>
+                  {c.value === 'auto' ? 'Auto (by load)' : c.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="sx-session-actions">
           <button
@@ -189,16 +210,12 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal })
           >
             Finish
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm('Discard this session? This cannot be undone.')) {
-                dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })
-              }
-            }}
+          <ConfirmButton
+            confirmLabel="Tap to discard"
+            onConfirm={() => dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })}
           >
             Discard
-          </button>
+          </ConfirmButton>
         </div>
       </div>
       <div
@@ -214,6 +231,9 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal })
       {session.restEndsAt && (
         <RestTimer
           restEndsAt={session.restEndsAt}
+          onAdjust={(sec) =>
+            dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: session.restEndsAt + sec * 1000 })
+          }
           onCancel={() => dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: null })}
         />
       )}
@@ -237,6 +257,8 @@ function SessionEntry({
   entry,
   exercise,
   unit,
+  ownedWeights,
+  restPref,
   dispatch,
   allSessions,
   pairLabel,
@@ -253,23 +275,34 @@ function SessionEntry({
   const complete = entry.sets.length > 0 && done === entry.sets.length
   const cooldown = entry.kind === 'cooldown'
 
-  function handleSetLogged() {
+  const restFor = (set) =>
+    restAfterSet({ restPref, plannedSec: entry.targetRestSec, exercise, reps: set.reps, rpe: set.rpe })
+
+  function handleSetLogged(set) {
     // No rest between superset partners (go straight to the next move) or
     // after a stretch.
     if (pairFirst || cooldown) return
-    const restSec = entry.targetRestSec ?? DEFAULT_REST_SEC
-    dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: Date.now() + restSec * 1000 })
+    dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: Date.now() + restFor(set) * 1000 })
+  }
+
+  // Rating a set while its rest is running re-times that rest (a hard set
+  // earns a longer one).
+  function handleRpeChanged(set) {
+    if (pairFirst || cooldown || restPref !== 'auto' || !session.restEndsAt || session.restEndsAt < Date.now()) return
+    const latest = Math.max(...session.entries.flatMap((e) => e.sets.filter((s) => s.done).map((s) => Date.parse(s.ts) || 0)))
+    const ts = Date.parse(set.ts) || 0
+    if (ts < latest) return
+    dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: ts + restFor(set) * 1000 })
   }
 
   function handleRemove() {
-    if (done > 0 && !window.confirm(`Remove ${exercise?.name ?? 'this exercise'} and its logged sets?`)) return
     dispatch({ type: 'DELETE_SESSION_ENTRY', sessionId: session.id, entryId: entry.id })
   }
 
   const target =
     entry.targetSets != null
       ? `${entry.targetSets} × ${entry.targetRepMin ?? '-'}-${entry.targetRepMax ?? '-'} ${entry.targetUnit === 'sec' ? 'sec' : 'reps'}` +
-        (entry.targetRestSec ? ` · rest ${entry.targetRestSec}s` : '')
+        (restPref !== 'auto' ? ` · rest ${restPref}s` : entry.targetRestSec ? ` · rest ~${entry.targetRestSec}s` : '')
       : null
 
   return (
@@ -300,17 +333,26 @@ function SessionEntry({
           <span className="sx-num sx-entry-progress">
             {done}/{entry.sets.length}
           </span>
-          <button type="button" className="sx-entry-remove" aria-label="Remove exercise" onClick={handleRemove}>
+          <ConfirmButton
+            className="sx-entry-remove"
+            aria-label="Remove exercise"
+            confirmLabel="Remove?"
+            skip={done === 0}
+            onConfirm={handleRemove}
+          >
             &times;
-          </button>
+          </ConfirmButton>
         </div>
       </div>
       <SetGrid
         sessionId={session.id}
         entry={entry}
+        exercise={exercise}
         unit={unit}
+        ownedWeights={ownedWeights}
         dispatch={dispatch}
         onSetLogged={handleSetLogged}
+        onRpeChanged={handleRpeChanged}
         previousSession={last}
       />
     </div>
