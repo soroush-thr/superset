@@ -467,11 +467,12 @@ id. So `tricep` heat is the sum of `tricep_long`, `tricep_lat`, `tricep_med`.
 
 ### 7.2 Drawing it
 
-Draw a **stylized diagrammatic body**, not an anatomical illustration. Clean
-geometric shapes with rounded joins, symmetrical, front and back sharing a
-silhouette. Two reasons: it is achievable by hand in SVG paths, and a schematic
-reads better than mediocre realism in a data tool. Target a 260 x 620 viewBox
-per view.
+Draw an **anatomical figure**: an eight-head-proportioned silhouette with
+muscle-shaped regions authored as point lists and smoothed into curves
+(Catmull-Rom), separated by thin background-coloured gaps, plus a few
+non-interactive contour lines (linea alba, ab segments, clavicles, kneecaps,
+spine) and a soft side-lit gradient for volume. Symmetrical, front and back
+sharing a silhouette. Target a 260 x 620 viewBox per view.
 
 Requirements:
 - Every region is one `<path>` with `data-region` and an `<title>` for a11y.

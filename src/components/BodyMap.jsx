@@ -1,5 +1,12 @@
-import React, { useMemo } from 'react'
-import { VIEW_BOX, SILHOUETTE_D, FRONT_REGIONS, BACK_REGIONS } from '../lib/bodyRegions.js'
+import React, { useId, useMemo } from 'react'
+import {
+  VIEW_BOX,
+  SILHOUETTE_D,
+  FRONT_REGIONS,
+  BACK_REGIONS,
+  FRONT_DETAILS,
+  BACK_DETAILS,
+} from '../lib/bodyRegions.js'
 import { heatColor } from '../lib/heat.js'
 import { SUBGROUP_BY_ID, REGION_LABELS } from '../lib/taxonomy.js'
 import { DEFAULT_TARGETS } from '../lib/constants.js'
@@ -41,8 +48,9 @@ function defaultScaleMax(values) {
 }
 
 /**
- * Renders one view (front or back) of the stylized body map: a shared
- * silhouette underneath, and 15-18 heat-coloured region shapes on top.
+ * Renders one view (front or back) of the anatomical body map: a shared
+ * silhouette underneath, 15-18 heat-coloured muscle shapes on top, then
+ * contour lines and a soft light gradient that give the figure volume.
  * See BUILD-PLAN.md section 7. Every region is a real DOM node, so hover,
  * focus, and click all work without a canvas or extra library.
  */
@@ -50,9 +58,19 @@ export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegio
   const regions = view === 'back' ? BACK_REGIONS : FRONT_REGIONS
   const totals = useMemo(() => aggregateByRegion(values), [values])
   const resolvedScaleMax = scaleMax ?? defaultScaleMax(values)
+  // Two maps render side by side, so gradient ids must be per-instance.
+  const shadeId = `sx-shade-${useId().replace(/:/g, '')}`
 
   return (
     <svg className="sx-bodymap" viewBox={VIEW_BOX} role="img" aria-label={`Body map, ${view} view`}>
+      <defs>
+        <linearGradient id={shadeId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="0.38" stopColor="#fff" stopOpacity="0.07" />
+          <stop offset="0.62" stopColor="#fff" stopOpacity="0.07" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.28" />
+        </linearGradient>
+      </defs>
       <path className="sx-bodymap-silhouette" d={SILHOUETTE_D} />
       {regions.map((region) => {
         const value = totals[region.id] || 0
@@ -76,6 +94,8 @@ export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegio
           </React.Fragment>
         )
       })}
+      <path className="sx-bodymap-detail" d={view === 'back' ? BACK_DETAILS : FRONT_DETAILS} />
+      <path className="sx-bodymap-shade" d={SILHOUETTE_D} fill={`url(#${shadeId})`} />
     </svg>
   )
 }

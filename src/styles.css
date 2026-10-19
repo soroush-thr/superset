@@ -499,21 +499,38 @@ button.sx-primary {
 }
 
 .sx-bodymap-silhouette {
-  fill: var(--surface-2);
+  fill: var(--surface);
   stroke: var(--line);
   stroke-width: 1.5;
+  stroke-linejoin: round;
 }
 
+/* The background-coloured stroke is the gap between neighbouring muscles. */
 .sx-bodymap-region {
-  stroke: transparent;
-  stroke-width: 1.5;
-  transition: stroke 0.12s ease;
+  stroke: var(--bg);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  transition: stroke 0.12s ease, filter 0.12s ease;
+}
+
+.sx-bodymap-detail {
+  fill: none;
+  stroke: var(--bg);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-opacity: 0.75;
+  pointer-events: none;
+}
+
+.sx-bodymap-shade {
+  pointer-events: none;
 }
 
 /* Section 7.3: hover and focus raise stroke to --accent at 1.5px. */
 .sx-bodymap-region:hover,
 .sx-bodymap-region:focus-visible {
   stroke: var(--accent);
+  filter: brightness(1.25);
   outline: none;
 }
 
