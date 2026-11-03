@@ -27,7 +27,7 @@ export const GENERATOR_DEFAULTS = {
   equipment: null, // null = resolved from the settings equipment profile by the caller
   hasBar: true, // a pull-up bar is available
   hasBench: true, // a bench is available
-  level: 'intermediate',
+  levels: ['beginner', 'intermediate'], // exercise levels to draw from; any non-empty mix
   goal: 'hypertrophy',
   durationMin: 45, // null = no time limit
   moves: null, // null = derive from time
@@ -42,15 +42,20 @@ export function generatorSettingsWithDefaults(saved, settings = {}) {
   const levelFromSettings = { beginner: 'beginner', intermediate: 'intermediate', expert: 'advanced' }[
     settings.maxLevel
   ]
+  // Older saves hold a single `level` that meant "up to this level".
+  const upTo = (level) => GENERATOR_LEVELS.slice(0, GENERATOR_LEVELS.indexOf(level) + 1)
   const merged = {
     ...GENERATOR_DEFAULTS,
-    ...(levelFromSettings && !saved?.level ? { level: levelFromSettings } : {}),
+    ...(levelFromSettings && !saved?.levels && !saved?.level ? { levels: upTo(levelFromSettings) } : {}),
     ...(saved || {}),
   }
+  if (!merged.levels && GENERATOR_LEVELS.includes(merged.level)) merged.levels = upTo(merged.level)
+  delete merged.level
   const validMajors = new Set(MAJORS.map((m) => m.id))
   merged.majors = (merged.majors || []).filter((m) => validMajors.has(m))
   merged.excludeSubs = (merged.excludeSubs || []).filter((g) => SUBGROUP_BY_ID[g])
-  if (!GENERATOR_LEVELS.includes(merged.level)) merged.level = GENERATOR_DEFAULTS.level
+  merged.levels = GENERATOR_LEVELS.filter((l) => (merged.levels || []).includes(l))
+  if (!merged.levels.length) merged.levels = GENERATOR_DEFAULTS.levels
   if (!GENERATOR_GOALS.includes(merged.goal)) merged.goal = GENERATOR_DEFAULTS.goal
   return merged
 }
@@ -93,7 +98,7 @@ const SEC_PER_REP = 3
 const SET_OVERHEAD_SEC = 10
 const AVG_WORK_SEC = 40 // a 10-rep set, used when sizing a workout from time
 const SETUP_SEC = 45 // per exercise: walk over, load it, first-set prep
-const UNILATERAL_NAME = /one[- ]arm|single[- ](arm|leg)|one[- ]leg|alternat|lunge|split squat|step-?up|bulgarian/i
+export const UNILATERAL_NAME = /one[- ]arm|single[- ](arm|leg)|one[- ]leg|alternat|lunge|split squat|step-?up|bulgarian/i
 const WARMUP_SEC = 600 // 5 min warm-up + 5 min cooldown
 const DEFAULT_DURATION_MIN = 45
 const MIN_MOVES = 1
@@ -101,8 +106,22 @@ const MAX_MOVES = 14
 
 // ------------------------------------------------------ exercise analysis
 
-const LEVEL_RANK = { beginner: 0, intermediate: 1, expert: 2 }
-const GEN_LEVEL_MAX = { beginner: 0, intermediate: 1, advanced: 2 }
+// The catalog calls its top level 'expert'; the generator says 'advanced'.
+const EXERCISE_LEVEL = { beginner: 'beginner', intermediate: 'intermediate', advanced: 'expert' }
+
+function levelsOf(params) {
+  if (params.levels?.length) return params.levels
+  // Callers that still pass a single level mean "up to this level".
+  const i = GENERATOR_LEVELS.indexOf(params.level)
+  return GENERATOR_LEVELS.slice(0, (i < 0 ? 1 : i) + 1)
+}
+
+/** The trainee's level for sets and reps: the hardest level selected, since
+ *  someone who picks intermediate moves can handle intermediate volume. */
+export function trainingLevel(params) {
+  const levels = levelsOf(params)
+  return GENERATOR_LEVELS.filter((l) => levels.includes(l)).pop() ?? 'intermediate'
+}
 
 const PATTERN_MAJOR = {
   squat: 'legs',
@@ -325,8 +344,8 @@ function equipmentOk(ex, params) {
 }
 
 function buildPool(exercises, params) {
-  const maxRank = GEN_LEVEL_MAX[params.level] ?? 1
-  const advanced = params.level === 'advanced'
+  const allowed = new Set(levelsOf(params).map((l) => EXERCISE_LEVEL[l]))
+  const advanced = allowed.has('expert')
   const categories = new Set(['strength', 'powerlifting'])
   if (advanced) categories.add('olympic weightlifting')
   if (advanced || params.goal === 'endurance') categories.add('plyometrics')
@@ -335,7 +354,7 @@ function buildPool(exercises, params) {
   for (const ex of exercises) {
     if (!ex.sub) continue
     if (!categories.has(ex.category)) continue
-    if ((LEVEL_RANK[ex.level] ?? 2) > maxRank) continue
+    if (!allowed.has(ex.level ?? 'expert')) continue
     if (!equipmentOk(ex, params)) continue
     out.push(describe(ex))
   }
@@ -495,7 +514,7 @@ function newPickState(params, sp, n) {
     remaining,
     covered,
     chosen: [],
-    intermediateUp: params.level !== 'beginner',
+    intermediateUp: trainingLevel(params) !== 'beginner',
     gym: params.location === 'gym',
   }
 }
@@ -507,10 +526,11 @@ function prescribe(meta, params, index = 0) {
   const kind = !meta.compound ? 'iso' : HEAVY_EQUIPMENT.has(meta.ex.equipment) ? 'heavy' : 'comp'
   const base = preset[kind]
   let sets = base.sets
-  if (params.level === 'beginner') sets = kind === 'iso' ? Math.min(sets, 2) : Math.min(sets, 3)
-  else if (params.level === 'advanced' && kind !== 'iso' && index < 3) sets = Math.min(5, sets + 1)
+  const level = trainingLevel(params)
+  if (level === 'beginner') sets = kind === 'iso' ? Math.min(sets, 2) : Math.min(sets, 3)
+  else if (level === 'advanced' && kind !== 'iso' && index < 3) sets = Math.min(5, sets + 1)
   let [repMin, repMax] = base.reps
-  if (params.level === 'beginner' && params.goal === 'strength' && kind === 'heavy') [repMin, repMax] = [5, 8]
+  if (level === 'beginner' && params.goal === 'strength' && kind === 'heavy') [repMin, repMax] = [5, 8]
   let restSec = base.rest
   let unit = 'reps'
   if (meta.pattern === 'core' || meta.pattern === 'calf') {
@@ -651,7 +671,8 @@ function fitToTime(items, budgetSec, params) {
   }
 
   // Under budget: grow volume toward it, compounds first, one set at a time.
-  const cap = (it) => (params.level === 'beginner' ? (it.compound ? 4 : 3) : it.compound ? 5 : 4)
+  const beginner = trainingLevel(params) === 'beginner'
+  const cap = (it) => (beginner ? (it.compound ? 4 : 3) : it.compound ? 5 : 4)
   let grew = true
   while (grew) {
     grew = false

@@ -37,7 +37,7 @@ const LOCATION_OPTIONS = [
 ]
 const LEVEL_OPTIONS = [
   { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Mid' },
+  { value: 'intermediate', label: 'Intermediate' },
   { value: 'advanced', label: 'Advanced' },
 ]
 const GOAL_OPTIONS = [
@@ -205,8 +205,22 @@ export default function Generate({ onStarted }) {
         </div>
 
         <div className="sx-field">
-          <span className="sx-eyebrow">Level</span>
-          <Segmented value={form.level} onChange={(level) => set({ level })} options={LEVEL_OPTIONS} />
+          <span className="sx-eyebrow">Levels</span>
+          <div className="sx-chip-row">
+            {LEVEL_OPTIONS.map((o) => (
+              <Chip
+                key={o.value}
+                label={o.label}
+                active={form.levels.includes(o.value)}
+                // At least one level stays on, or nothing could be drawn.
+                onClick={() => {
+                  const levels = toggle(form.levels, o.value)
+                  if (levels.length) set({ levels })
+                }}
+              />
+            ))}
+          </div>
+          <p className="sx-helper-text">Pick one or more. Sets and reps follow the hardest level picked.</p>
         </div>
 
         <div className="sx-field">

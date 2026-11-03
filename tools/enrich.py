@@ -199,6 +199,120 @@ def enrich(ex):
     return acc, ("high" if fired else "med")
 
 
+# ------------------------------------------------------------ level fixes
+
+# free-exercise-db's levels are inconsistent: static stretches and foam
+# rolling marked "expert", machine and cable isolation marked
+# "intermediate", while pull-ups, dips, depth jumps and Olympic lifts are
+# "beginner". The rule of thumb used here:
+#   beginner      machines, cables, stretches, foam rolling, dumbbell and
+#                 bodyweight basics anyone can do safely on day one
+#   intermediate  free-barbell squats, hinges and rows, pull-ups and dips,
+#                 kettlebell ballistics, jumps that need landing control
+#   expert        full Olympic lifts, accommodating resistance (bands and
+#                 chains), muscle-ups, one-arm and ring work, depth jumps
+# Keyed by name; applied on top of the raw level.
+LEVEL_OVERRIDES = {
+    # Stretches and foam rolling: nothing about them is advanced.
+    **{n: "beginner" for n in [
+        "Behind Head Chest Stretch", "Lying Bent Leg Groin", "Lying Crossover", "Lying Glute",
+        "Lying Hamstring", "Lying Prone Quadriceps", "Overhead Lat", "Overhead Triceps",
+        "Seated Biceps", "Seated Front Deltoid", "Seated Glute", "Seated Hamstring",
+        "All Fours Quad Stretch", "Adductor/Groin", "IT Band and Glute Stretch", "Peroneals Stretch",
+        "Posterior Tibialis Stretch", "Quad Stretch", "Seated Hamstring and Calf Stretch",
+        "Groin and Back Stretch", "World's Greatest Stretch", "Windmills",
+        "Adductor", "Anterior Tibialis-SMR", "Brachialis-SMR", "Calves-SMR", "Foot-SMR",
+        "Iliotibial Tract-SMR", "Neck-SMR", "Peroneals-SMR", "Piriformis-SMR", "Quadriceps-SMR",
+        "Rhomboids-SMR",
+    ]},
+    # Steady cardio machines.
+    **{n: "beginner" for n in [
+        "Elliptical Trainer", "Rowing, Stationary", "Stairmaster", "Step Mill", "Rope Jumping",
+    ]},
+    # Machine, cable, dumbbell and bodyweight basics marked too hard.
+    **{n: "beginner" for n in [
+        "Ab Crunch Machine", "Decline Crunch", "Russian Twist", "Frog Sit-Ups", "Weighted Sit-Ups - With Bands",
+        "Weighted Ball Hyperextension", "Weighted Ball Side Bend", "Reverse Hyperextension", "Pelvic Tilt Into Bridge",
+        "Calf Raise On A Dumbbell", "Standing Dumbbell Calf Raise", "Donkey Calf Raises",
+        "Dumbbell Shoulder Press", "Arnold Dumbbell Press", "Dumbbell One-Arm Shoulder Press",
+        "Standing Palms-In Dumbbell Press", "Dumbbell One-Arm Upright Row", "Upright Cable Row",
+        "Dumbbell Lying Rear Lateral Raise", "Dumbbell Lying One-Arm Rear Lateral Raise", "Lying Rear Delt Raise",
+        "Seated Bent-Over Rear Delt Raise", "Lying One-Arm Lateral Raise", "Front Plate Raise",
+        "Standing Dumbbell Straight-Arm Front Delt Raise Above Head", "Standing Front Barbell Raise Over Head",
+        "Around The Worlds", "Face Pull", "Middle Back Shrug",
+        "Dumbbell Prone Incline Curl", "Standing Dumbbell Reverse Curl", "Standing Inner-Biceps Curl",
+        "Standing One-Arm Cable Curl", "Overhead Cable Curl", "Lying Cable Curl", "High Cable Curls", "Zottman Curl",
+        "Reverse Barbell Preacher Curls", "Seated Close-Grip Concentration Barbell Curl", "Lying High Bench Barbell Curl",
+        "Drag Curl", "Dumbbell Lying Pronation", "Dumbbell Lying Supination",
+        "Seated One-Arm Dumbbell Palms-Down Wrist Curl", "Plate Pinch",
+        "Dumbbell One-Arm Triceps Extension", "Lying Dumbbell Tricep Extension",
+        "Seated Bent-Over Two-Arm Dumbbell Triceps Extension", "Kneeling Cable Triceps Extension",
+        "Standing Low-Pulley One-Arm Triceps Extension", "Lying Close-Grip Barbell Triceps Press To Chin",
+        "Lying Triceps Press", "Incline Barbell Triceps Extension",
+        "Lying Close-Grip Barbell Triceps Extension Behind The Head",
+        "Push-Ups - Close Triceps Position", "Close-Grip Push-Up off of a Dumbbell",
+        "Flat Bench Cable Flyes", "Incline Cable Flye", "Bent-Arm Dumbbell Pullover", "Straight-Arm Dumbbell Pullover",
+        "Dumbbell Floor Press", "Floor Press", "One-Arm Kettlebell Floor Press",
+        "V-Bar Pulldown", "Full Range-Of-Motion Lat Pulldown", "Seated One-arm Cable Pulley Rows",
+        "Elevated Cable Rows", "Lying T-Bar Row", "Bodyweight Mid Row",
+        "Alternating Kettlebell Row", "One-Arm Kettlebell Row", "Two-Arm Kettlebell Row",
+        "Dumbbell Rear Lunge", "Dumbbell Step Ups", "Dumbbell Squat To A Bench", "Crossover Reverse Lunge",
+        "Split Squats", "Freehand Jump Squat", "Groiners",
+        "Narrow Stance Leg Press", "Narrow Stance Hack Squats", "Smith Machine Leg Press", "Lying Machine Squat",
+        "Barbell Hip Thrust", "Barbell Glute Bridge",
+        "Kettlebell Halo with Overhead Extension", "Kettlebell Pass Between The Legs",
+    ]},
+    # Free-barbell compounds, bodyweight pulls and dips, landing-heavy jumps.
+    **{n: "intermediate" for n in [
+        "Barbell Squat", "Barbell Walking Lunge", "Barbell Side Split Squat", "Single-Leg High Box Squat",
+        "Barbell Squat To A Bench", "Front Barbell Squat", "Front Barbell Squat To A Bench", "Zercher Squats",
+        "Speed Squats", "Stiff Leg Barbell Good Morning", "One-Arm Side Deadlift",
+        "Bent Over Barbell Row", "T-Bar Row with Handle", "Standing Military Press",
+        "JM Press", "Bradford/Rocky Presses", "Standing Bradford Press", "Press Sit-Up",
+        "Chin-Up", "Pullups", "V-Bar Pullup", "Mixed Grip Chin",
+        "Dips - Triceps Version", "Parallel Bar Dip", "Hanging Leg Raise", "Barbell Ab Rollout - On Knees",
+        "Isometric Wipers", "Plyo Push-up", "Plyo Kettlebell Pushups", "Alternating Renegade Row",
+        "Clean Deadlift", "Clean Shrug", "Push Press", "Open Palm Kettlebell Clean", "One-Arm Kettlebell Snatch",
+        "Box Jump (Multiple Response)", "Hurdle Hops", "Knee Tuck Jump", "Single-Leg Hop Progression",
+        "Single-Leg Lateral Hop", "Lateral Box Jump", "Split Jump", "Incline Push-Up Depth Jump", "Sandbag Load",
+    ]},
+    # Skills, Olympic lifts and accommodating resistance.
+    **{n: "expert" for n in [
+        "Ring Dips", "Muscle Up", "Kipping Muscle Up", "Single-Arm Push-Up", "Side To Side Chins",
+        "Gironda Sternum Chins", "Gorilla Chin/Crunch", "Barbell Ab Rollout", "Natural Glute Ham Raise",
+        "Floor Glute-Ham Raise", "Advanced Kettlebell Windmill",
+        "Clean", "Snatch", "Split Jerk", "Snatch Balance", "Heaving Snatch Balance", "Jerk Balance",
+        "Depth Jump Leap", "Linear Depth Jump",
+        "Reverse Band Bench Press", "Reverse Band Box Squat", "Squat with Bands", "Squat with Chains",
+        "Sumo Deadlift with Bands", "Sumo Deadlift with Chains", "Floor Press with Chains", "Rack Pull with Bands",
+    ]},
+}
+
+
+def apply_level_overrides(exercises):
+    """Set `level` from LEVEL_OVERRIDES; returns how many changed."""
+    by_name = {e["name"]: e for e in exercises}
+    missing = [n for n in LEVEL_OVERRIDES if n not in by_name]
+    if missing:
+        raise SystemExit(f"LEVEL_OVERRIDES names not in the catalog: {missing}")
+    changed = 0
+    for name, level in LEVEL_OVERRIDES.items():
+        if by_name[name]["level"] != level:
+            by_name[name]["level"] = level
+            changed += 1
+    return changed
+
+
+def levels_only():
+    """Re-apply LEVEL_OVERRIDES to the existing exercises.json in place,
+    without needing exercises.raw.json: python tools/enrich.py --levels-only"""
+    path = DATA_DIR / "exercises.json"
+    exercises = json.load(open(path))
+    changed = apply_level_overrides(exercises)
+    json.dump(exercises, open(path, "w"), separators=(",", ":"))
+    print(f"{changed} levels changed")
+
+
 def main():
     raw = json.load(open(SRC))
     out = []
@@ -224,6 +338,8 @@ def main():
             "reviewed": False,
         })
 
+    apply_level_overrides(out)
+
     tax = {
         "version": 1,
         "secondaryDiscount": SECONDARY_DISCOUNT,
@@ -244,4 +360,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    levels_only() if "--levels-only" in sys.argv else main()

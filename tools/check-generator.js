@@ -32,15 +32,16 @@ const verbose = process.argv.includes('-v')
 
 const HOME = ['body only', 'dumbbell', 'bands', 'exercise ball']
 const GYM = ['barbell', 'dumbbell', 'cable', 'machine', 'body only', 'kettlebells', 'e-z curl bar', 'bands', 'medicine ball', 'other']
-const LEVEL_RANK = { beginner: 0, intermediate: 1, expert: 2 }
-const LEVEL_MAX = { beginner: 0, intermediate: 1, advanced: 2 }
+const EXERCISE_LEVEL = { beginner: 'beginner', intermediate: 'intermediate', advanced: 'expert' }
+// Single levels plus the mixes people actually pick.
+const LEVEL_SETS = [['beginner'], ['intermediate'], ['advanced'], ['beginner', 'intermediate'], ['intermediate', 'advanced']]
 
 let failures = 0
 let runs = 0
 function check(ok, msg) {
   if (!ok) {
     failures += 1
-    if (failures <= 25) console.error('FAIL:', msg)
+    if (process.argv.includes("--all") || failures <= 25) console.error('FAIL:', msg)
   }
 }
 
@@ -51,11 +52,11 @@ function base(over) {
 const ALL_MAJORS = ['chest', 'back', 'shoulders', 'arms', 'core', 'legs']
 const scenarios = []
 for (const location of ['home', 'gym']) {
-  for (const level of gen.GENERATOR_LEVELS) {
+  for (const levels of LEVEL_SETS) {
     for (const goal of gen.GENERATOR_GOALS) {
       const common = {
         location,
-        level,
+        levels,
         goal,
         equipment: location === 'home' ? HOME : GYM,
         hasBar: location === 'gym',
@@ -76,7 +77,7 @@ for (const params of scenarios) {
   for (const seed of [1, 2]) {
     runs += 1
     const w = gen.generateWorkout(params, ctx, seed)
-    const tag = `${params.location}/${params.level}/${params.goal}/${params.type}:${params.majors.join('+')}/t${params.durationMin}/m${params.moves}/s${seed}`
+    const tag = `${params.location}/${params.levels.join('+')}/${params.goal}/${params.type}:${params.majors.join('+')}/t${params.durationMin}/m${params.moves}/s${seed}`
     const again = seed === 1 ? gen.generateWorkout(params, ctx, seed) : w
     check(JSON.stringify(again.items) === JSON.stringify(w.items), `${tag}: not deterministic`)
 
@@ -86,7 +87,7 @@ for (const params of scenarios) {
     for (const id of ids) {
       const ex = ctx.byId[id]
       check(equip.has(ex.equipment), `${tag}: ${ex.name} needs ${ex.equipment}`)
-      check(LEVEL_RANK[ex.level] <= LEVEL_MAX[params.level], `${tag}: ${ex.name} is ${ex.level}`)
+      check(params.levels.some((l) => EXERCISE_LEVEL[l] === ex.level), `${tag}: ${ex.name} is ${ex.level}`)
       check(!['stretching', 'cardio', 'strongman'].includes(ex.category), `${tag}: ${ex.name} category ${ex.category}`)
       if (!params.hasBar) check(!/pull-?up|chin-?up/i.test(ex.name) || /scapular/i.test(ex.name), `${tag}: ${ex.name} needs a bar`)
       const majors = new Set(params.majors)
@@ -97,7 +98,7 @@ for (const params of scenarios) {
     }
     if (params.moves) {
       const want = Math.min(params.moves, 14)
-      check(ids.length === want || w.warnings.some((x) => x.kind === 'few'), `${tag}: expected ${want} moves, got ${ids.length}`)
+      check(ids.length === want || w.warnings.some((x) => x.kind === 'few' || x.kind === 'empty'), `${tag}: expected ${want} moves, got ${ids.length}`)
     }
     const limit = params.durationMin ?? (params.moves ? null : 45)
     if (limit && ids.length) {
@@ -195,7 +196,7 @@ if (verbose) {
     if (w.unreachable.length) console.log('  unreachable:', w.unreachable.join(','))
   }
   show('gym full body 45min', base({ equipment: GYM, majors: ALL_MAJORS }), 5)
-  show('home full body 30min beginner', base({ location: 'home', equipment: HOME, hasBar: false, hasBench: false, level: 'beginner', durationMin: 30 }), 5)
+  show('home full body 30min beginner', base({ location: 'home', equipment: HOME, hasBar: false, hasBench: false, levels: ['beginner'], durationMin: 30 }), 5)
   show('gym chest 5 moves', base({ type: 'targeted', majors: ['chest'], equipment: GYM, durationMin: null, moves: 5 }), 3)
   show('gym legs 6 moves strength', base({ type: 'targeted', majors: ['legs'], equipment: GYM, goal: 'strength', durationMin: null, moves: 6 }), 3)
   show('gym back+arms 25min supersets', base({ type: 'targeted', majors: ['back', 'arms'], equipment: GYM, durationMin: 25, moves: 8, supersets: true }), 3)
