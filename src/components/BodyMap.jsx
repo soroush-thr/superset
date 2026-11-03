@@ -65,10 +65,10 @@ export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegio
     <svg className="sx-bodymap" viewBox={VIEW_BOX} role="img" aria-label={`Body map, ${view} view`}>
       <defs>
         <linearGradient id={shadeId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="0" stopColor="#000" stopOpacity="0.16" />
           <stop offset="0.38" stopColor="#fff" stopOpacity="0.07" />
           <stop offset="0.62" stopColor="#fff" stopOpacity="0.07" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.16" />
         </linearGradient>
       </defs>
       <path className="sx-bodymap-silhouette" d={SILHOUETTE_D} />

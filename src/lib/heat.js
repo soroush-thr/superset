@@ -1,5 +1,5 @@
 // 5-stop heat ramp interpolation for BodyMap. See BUILD-PLAN.md section 7.3.
-import { HEAT_RAMP } from './constants.js'
+import { HEAT_RAMP, MIN_HEAT_T } from './constants.js'
 
 function hexToRgb(hex) {
   const n = parseInt(hex.slice(1), 16)
@@ -35,6 +35,6 @@ export function rampColor(t) {
 /** value/scaleMax -> a ramp colour, clamped. The function BodyMap calls
  *  per region. */
 export function heatColor(value, scaleMax) {
-  if (!scaleMax || scaleMax <= 0) return rampColor(0)
-  return rampColor(value / scaleMax)
+  if (!scaleMax || scaleMax <= 0 || !(value > 0)) return rampColor(0)
+  return rampColor(Math.max(value / scaleMax, MIN_HEAT_T))
 }

@@ -60,13 +60,17 @@ export const DEFAULT_TARGETS = {
 }
 
 // 5-stop heat ramp on t = clamp(value / scaleMax, 0, 1). See BUILD-PLAN.md 7.3.
+// Every trained stop is bright and saturated enough to stand apart from the
+// untouched grey on the dark surface; any volume at all starts at MIN_HEAT_T,
+// so a little work never fades into the untouched colour.
 export const HEAT_RAMP = [
-  { t: 0.0, hex: '#1F262E' }, // untouched
-  { t: 0.25, hex: '#2F4A5E' }, // minimal
-  { t: 0.5, hex: '#5E7C57' }, // approaching target
-  { t: 0.75, hex: '#B8913A' }, // in range
-  { t: 1.0, hex: '#C9573C' }, // at or above ceiling
+  { t: 0.0, hex: '#262E38' }, // untouched
+  { t: 0.05, hex: '#3A7DB5' }, // minimal
+  { t: 0.5, hex: '#4FA77E' }, // approaching target
+  { t: 0.75, hex: '#E0AA3E' }, // in range
+  { t: 1.0, hex: '#E5603C' }, // at or above ceiling
 ]
+export const MIN_HEAT_T = 0.05
 
 export const SECONDARY_MUSCLE_DISCOUNT = 0.5
 
