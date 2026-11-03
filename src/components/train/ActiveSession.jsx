@@ -299,11 +299,11 @@ function SessionEntry({
     dispatch({ type: 'DELETE_SESSION_ENTRY', sessionId: session.id, entryId: entry.id })
   }
 
-  const target =
-    entry.targetSets != null
-      ? `${entry.targetSets} × ${entry.targetRepMin ?? '-'}-${entry.targetRepMax ?? '-'} ${entry.targetUnit === 'sec' ? 'sec' : 'reps'}` +
-        (restPref !== 'auto' ? ` · rest ${restPref}s` : entry.targetRestSec ? ` · rest ~${entry.targetRestSec}s` : '')
-      : null
+  const repRange =
+    entry.targetRepMin != null && entry.targetRepMax != null && entry.targetRepMin !== entry.targetRepMax
+      ? `${entry.targetRepMin}–${entry.targetRepMax}`
+      : `${entry.targetRepMax ?? entry.targetRepMin ?? '-'}`
+  const rest = restPref !== 'auto' ? `rest ${restPref}s` : entry.targetRestSec ? `rest ~${entry.targetRestSec}s` : ''
 
   return (
     <div
@@ -321,7 +321,12 @@ function SessionEntry({
           {cooldown ? (
             <span className="sx-entry-meta">{entry.note}</span>
           ) : (
-            target && <span className="sx-entry-meta sx-num">{target}</span>
+            entry.targetSets != null && (
+              <span className="sx-entry-target sx-num">
+                <b>{entry.targetSets}</b> sets × <b>{repRange}</b> {entry.targetUnit === 'sec' ? 'sec' : 'reps'}
+                {rest && <span className="sx-entry-target-rest"> · {rest}</span>}
+              </span>
+            )
           )}
           {last && (
             <span className="sx-entry-meta sx-num">

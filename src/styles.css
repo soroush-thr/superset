@@ -1854,6 +1854,23 @@ button.sx-thumb {
   color: var(--text-dim);
 }
 
+.sx-entry-target {
+  margin: 2px 0;
+  font-size: var(--fs-3);
+  color: var(--text-dim);
+}
+
+/* The plan for this exercise is what you glance at between sets. */
+.sx-entry-target b {
+  font-size: var(--fs-4);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sx-entry-target-rest {
+  font-size: var(--fs-2);
+}
+
 .sx-entry-name-grow {
   flex: 1;
   margin-bottom: 0;
@@ -1958,7 +1975,7 @@ button.sx-thumb {
 }
 
 .sx-entry-progress {
-  font-size: var(--fs-2);
+  font-size: var(--fs-3);
   color: var(--text-dim);
 }
 
@@ -1985,15 +2002,15 @@ button.sx-thumb {
 .sx-set-head,
 .sx-set-row {
   display: grid;
-  grid-template-columns: 18px minmax(0, 170px) minmax(0, 140px) 44px;
+  grid-template-columns: 22px minmax(0, 170px) minmax(0, 140px) 44px;
   justify-content: space-between;
   column-gap: 6px;
   align-items: center;
 }
 
 .sx-set-head {
-  font-size: 10px;
-  color: var(--text-faint);
+  font-size: var(--fs-1);
+  color: var(--text-dim);
 }
 
 .sx-set-head span {
@@ -2103,8 +2120,29 @@ button.sx-thumb {
   border-color: var(--accent-dim);
 }
 
+/* Weight and reps are read mid-set from arm's length: bigger, bolder. */
+.sx-set-row .sx-stepper {
+  height: 42px;
+}
+
+.sx-set-row .sx-stepper > button {
+  flex-basis: 36px;
+  font-size: var(--fs-4);
+}
+
+.sx-set-row .sx-stepper-value {
+  font-size: var(--fs-4);
+  font-weight: 600;
+}
+
+.sx-set-row > .sx-set-index {
+  font-size: var(--fs-3);
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
 .sx-set-tick {
-  height: 34px;
+  height: 42px;
 }
 
 .sx-set-rpe {
