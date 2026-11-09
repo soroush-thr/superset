@@ -19,26 +19,27 @@ function label(value) {
  * similarity over `sub`, same equipment/level gate as Coverage's gap
  * suggestions), and -- for a user-created exercise -- a delete action.
  * `onSelectExercise` lets a substitute row swap the drawer's content
- * in place instead of closing it.
+ * in place instead of closing it. `substituteFilter` ({ equipment, levels })
+ * replaces the settings' equipment profile and level cap, so the drawer
+ * opened from the generator suggests what the generator itself could pick.
  */
-export default function ExerciseDetail({ exercise, open, onClose, onSelectExercise }) {
+export default function ExerciseDetail({ exercise, open, onClose, onSelectExercise, substituteFilter = null }) {
   const { state } = useStore()
   const dispatch = useDispatch()
   const exercisesIndex = useExercises()
 
   const substitutes = useMemo(() => {
     if (!exercise) return []
-    const equipmentProfile = equipmentOptionsFor(
-      state.settings.equipmentProfiles,
-      state.settings.activeProfile,
-      allEquipment(state.customExercises),
-    )
+    const equipmentProfile =
+      substituteFilter?.equipment ??
+      equipmentOptionsFor(state.settings.equipmentProfiles, state.settings.activeProfile, allEquipment(state.customExercises))
     return substitutesFor(exercise.id, {
       index: exercisesIndex,
       equipmentProfile,
       maxLevel: state.settings.maxLevel,
+      levels: substituteFilter?.levels ?? null,
     })
-  }, [exercise, exercisesIndex, state.settings.equipmentProfiles, state.settings.activeProfile, state.settings.maxLevel, state.customExercises])
+  }, [exercise, exercisesIndex, state.settings.equipmentProfiles, state.settings.activeProfile, state.settings.maxLevel, state.customExercises, substituteFilter])
 
   if (!exercise) {
     return <Drawer open={open} onClose={onClose} title="Exercise" />

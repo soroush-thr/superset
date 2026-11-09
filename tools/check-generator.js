@@ -252,6 +252,23 @@ for (const [loc, equipment] of [['gym', GYM], ['home', HOME]]) {
   }
 }
 
+// Cooldown stretches vary across workouts and stay on the worked muscles.
+{
+  const p = base({ majors: ALL_MAJORS, equipment: GYM })
+  const counts = new Map()
+  for (let s = 1; s <= 200; s++) for (const c of gen.generateWorkout(p, ctx, s * 31).cooldown) counts.set(c.exerciseId, (counts.get(c.exerciseId) || 0) + 1)
+  check(counts.size >= 50, `cooldown: only ${counts.size} distinct stretches over 200 workouts`)
+  check(Math.max(...counts.values()) / 200 <= 0.45, `cooldown: one stretch in ${Math.round((100 * Math.max(...counts.values())) / 200)}% of workouts`)
+  const legs = base({ type: 'targeted', majors: ['legs'], equipment: GYM })
+  for (let s = 1; s <= 20; s++) {
+    for (const c of gen.generateWorkout(legs, ctx, s).cooldown) {
+      const sub = ctx.byId[c.exerciseId].sub
+      const lower = Object.entries(sub).filter(([g]) => SUBGROUP_BY_ID[g].major === 'legs' || g === 'erector').reduce((t, [, v]) => t + v, 0)
+      check(lower > 0, `legs cooldown ${s}: ${c.name} stretches no lower-body muscle`)
+    }
+  }
+}
+
 // Bar / bench gating at home.
 {
   const p = base({ majors: ['back'], location: 'home', equipment: HOME, hasBar: false, hasBench: false, durationMin: null, moves: 6 })

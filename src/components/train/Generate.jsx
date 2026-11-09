@@ -15,6 +15,7 @@ import {
   editItem,
   removeItem,
   applyRest,
+  catalogLevels,
 } from '../../lib/generator.js'
 import { REST_CHOICES, restPrefOf } from '../../lib/rest.js'
 import { OWNABLE_EQUIPMENT } from '../../lib/weights.js'
@@ -68,6 +69,14 @@ export default function Generate({ onStarted }) {
   const [detailId, setDetailId] = useState(null)
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+
+  // The detail drawer's substitutes follow the generator's equipment and
+  // level picks (the workout's, once one exists), not the app-wide settings.
+  const filterSource = workout?.params ?? form
+  const substituteFilter = useMemo(
+    () => ({ equipment: filterSource.equipment, levels: catalogLevels(filterSource) }),
+    [filterSource.equipment, filterSource.levels],
+  )
 
   const ctx = useMemo(
     () =>
@@ -345,6 +354,7 @@ export default function Generate({ onStarted }) {
         open={!!detailId}
         onClose={() => setDetailId(null)}
         onSelectExercise={(ex) => setDetailId(ex.id)}
+        substituteFilter={substituteFilter}
       />
     </div>
   )

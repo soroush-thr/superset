@@ -227,21 +227,26 @@ function cosineSimilarity(a, b) {
  * suggestExercises. `index` is the { list, byId } shape from
  * buildExerciseIndex, so custom exercises are eligible candidates too.
  */
-export function substitutesFor(exerciseId, { index, equipmentProfile, maxLevel, n = 5 }) {
+export function substitutesFor(exerciseId, { index, equipmentProfile, maxLevel, levels = null, excludeIds = null, n = 5 }) {
   const source = index.byId[exerciseId]
   if (!source?.sub) return []
 
   const maxLevelRank = LEVEL_ORDER[maxLevel] ?? LEVEL_ORDER.expert
+  // An explicit set of catalog levels (the generator's level picks) replaces
+  // the app-wide "up to maxLevel" cap.
+  const levelSet = levels ? new Set(levels) : null
   const equipmentSet = new Set(equipmentProfile)
   const allowed = substituteCategories(source)
 
   const scored = []
   for (const candidate of index.list) {
     if (candidate.id === exerciseId || !candidate.sub) continue
+    if (excludeIds?.has(candidate.id)) continue
     if (!equipmentSet.has(candidate.equipment)) continue
     if (!allowed.has(categoryOf(candidate))) continue
-    const levelRank = LEVEL_ORDER[candidate.level] ?? LEVEL_ORDER.expert
-    if (levelRank > maxLevelRank) continue
+    if (levelSet) {
+      if (!levelSet.has(candidate.level ?? 'expert')) continue
+    } else if ((LEVEL_ORDER[candidate.level] ?? LEVEL_ORDER.expert) > maxLevelRank) continue
     const score = cosineSimilarity(source.sub, candidate.sub)
     if (score <= 0) continue
     scored.push({ exercise: candidate, score, rank: score + qualityBonus(candidate, SUB_STAPLE_BONUS) })

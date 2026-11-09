@@ -110,6 +110,12 @@ const MAX_MOVES = 14
 // The catalog calls its top level 'expert'; the generator says 'advanced'.
 const EXERCISE_LEVEL = { beginner: 'beginner', intermediate: 'intermediate', advanced: 'expert' }
 
+/** The catalog levels a generator form draws from ('advanced' -> 'expert'),
+ *  for lists elsewhere that should offer only what the generator could. */
+export function catalogLevels(params) {
+  return levelsOf(params).map((l) => EXERCISE_LEVEL[l])
+}
+
 function levelsOf(params) {
   if (params.levels?.length) return params.levels
   // Callers that still pass a single level mean "up to this level".
@@ -389,7 +395,10 @@ const PICK = { k: 12, temperature: 0.2, margin: 0.35 }
 // already shown, so the window can stay tight enough to keep out odd picks.
 const SWAP_PICK = { k: 12, temperature: 0.25, margin: 0.45 }
 
-// Repetition penalties: exercises from the last session, from the past
+// Cooldown stretches, on scores scaled so the best is 1.
+const COOLDOWN_PICK = { k: 10, temperature: 0.18, margin: 0.5 }
+
+// Repetition penalties:exercises from the last session, from the past
 // week, and from the workout being replaced by "Generate a new workout".
 const LAST_SESSION_PENALTY = 0.3
 const RECENT_PENALTY = 0.15
@@ -731,9 +740,15 @@ function pickCooldown(ctx, params, chosen, rng, count) {
       for (const [g, f] of Object.entries(m.frac)) s += f * (left[g] || 0)
       if (s <= 0) continue
       if (out.some((o) => jaccard(o.tokens, m.tokens) >= 0.6)) s *= 0.3
+      if (ctx.lastIds?.has(m.ex.id)) s *= 0.6
       scored.push({ meta: m, score: s })
     }
-    const pick = pickWeighted(scored, rng, { k: 3, temperature: 0.15 })
+    // Raw scores scale with how much the workout covered, so compare them
+    // relative to the best: any stretch reaching at least ~half as much of
+    // the worked muscles stays in the draw, not only the top three.
+    const best = Math.max(0, ...scored.map((c) => c.score))
+    const relative = best > 0 ? scored.map((c) => ({ meta: c.meta, score: c.score / best })) : scored
+    const pick = pickWeighted(relative, rng, COOLDOWN_PICK)
     if (!pick) break
     picked.add(pick.ex.id)
     out.push(pick)

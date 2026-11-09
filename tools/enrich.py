@@ -289,6 +289,64 @@ LEVEL_OVERRIDES = {
 }
 
 
+# Muscle vectors the keyword rules got wrong, found by checking each lift's
+# main muscle against its name. A string "like:<name>" copies that
+# exercise's (correct) vector; a dict is the vector itself. Overridden
+# entries are marked conf "high" and reviewed. Keyed by name.
+SUB_OVERRIDES = {
+    # Bench variants scored as lat exercises: they are bench presses.
+    "Bench Press - Powerlifting": "like:Barbell Bench Press - Medium Grip",
+    "Bench Press with Chains": "like:Barbell Bench Press - Medium Grip",
+    "Reverse Band Bench Press": "like:Barbell Bench Press - Medium Grip",
+    # Floor presses scored as triceps work: a bench press with a shorter range.
+    "Floor Press": "like:Barbell Bench Press - Medium Grip",
+    "Floor Press with Chains": "like:Barbell Bench Press - Medium Grip",
+    "Dumbbell Floor Press": "like:Dumbbell Bench Press",
+    "One Arm Floor Press": "like:Barbell Bench Press - Medium Grip",
+    # Rear-delt flyes and raises scored as front or side delt work.
+    "Dumbbell Lying Rear Lateral Raise": "like:Seated Bent-Over Rear Delt Raise",
+    "Dumbbell Lying One-Arm Rear Lateral Raise": "like:Seated Bent-Over Rear Delt Raise",
+    "Reverse Machine Flyes": "like:Reverse Flyes",
+    "Back Flyes - With Bands": "like:Reverse Flyes",
+    # A hip-flexor raise scored as a pure quad move.
+    "Hip Flexion with Band": {"hip_flexor": 0.7, "quad_rf": 0.3},
+}
+
+# Single-joint moves the dataset calls compound. Keyed by name.
+MECHANIC_OVERRIDES = {
+    "Back Flyes - With Bands": "isolation",
+    "Hip Flexion with Band": "isolation",
+}
+
+
+def apply_sub_overrides(exercises):
+    """Set `sub` from SUB_OVERRIDES and `mechanic` from MECHANIC_OVERRIDES;
+    returns how many exercises changed."""
+    by_name = {e["name"]: e for e in exercises}
+    names = list(SUB_OVERRIDES) + list(MECHANIC_OVERRIDES)
+    refs = [v[5:] for v in SUB_OVERRIDES.values() if isinstance(v, str)]
+    missing = [n for n in names + refs if n not in by_name]
+    if missing:
+        raise SystemExit(f"override names not in the catalog: {missing}")
+    if any(isinstance(SUB_OVERRIDES.get(r), str) for r in refs):
+        raise SystemExit("a like: reference must not itself be overridden by like:")
+    for g in {g for v in SUB_OVERRIDES.values() if isinstance(v, dict) for g in v}:
+        if g not in SUBGROUPS:
+            raise SystemExit(f"unknown sub-group in SUB_OVERRIDES: {g}")
+    changed = set()
+    for name, value in SUB_OVERRIDES.items():
+        sub = dict(by_name[value[5:]]["sub"]) if isinstance(value, str) else dict(value)
+        ex = by_name[name]
+        if ex["sub"] != sub or ex["conf"] != "high" or not ex["reviewed"]:
+            ex["sub"], ex["conf"], ex["reviewed"] = sub, "high", True
+            changed.add(name)
+    for name, mechanic in MECHANIC_OVERRIDES.items():
+        if by_name[name]["mechanic"] != mechanic:
+            by_name[name]["mechanic"] = mechanic
+            changed.add(name)
+    return len(changed)
+
+
 def apply_level_overrides(exercises):
     """Set `level` from LEVEL_OVERRIDES; returns how many changed."""
     by_name = {e["name"]: e for e in exercises}
@@ -303,14 +361,16 @@ def apply_level_overrides(exercises):
     return changed
 
 
-def levels_only():
-    """Re-apply LEVEL_OVERRIDES to the existing exercises.json in place,
-    without needing exercises.raw.json: python tools/enrich.py --levels-only"""
+def overrides_only():
+    """Re-apply LEVEL_OVERRIDES, SUB_OVERRIDES and MECHANIC_OVERRIDES to the
+    existing exercises.json in place, without needing exercises.raw.json:
+    python tools/enrich.py --overrides-only  (--levels-only still works)"""
     path = DATA_DIR / "exercises.json"
     exercises = json.load(open(path))
-    changed = apply_level_overrides(exercises)
+    levels = apply_level_overrides(exercises)
+    subs = apply_sub_overrides(exercises)
     json.dump(exercises, open(path, "w"), separators=(",", ":"))
-    print(f"{changed} levels changed")
+    print(f"{levels} levels changed, {subs} muscle vectors / mechanics changed")
 
 
 def main():
@@ -339,6 +399,7 @@ def main():
         })
 
     apply_level_overrides(out)
+    apply_sub_overrides(out)
 
     tax = {
         "version": 1,
@@ -361,4 +422,5 @@ def main():
 
 if __name__ == "__main__":
     import sys
-    levels_only() if "--levels-only" in sys.argv else main()
+    in_place = "--overrides-only" in sys.argv or "--levels-only" in sys.argv
+    overrides_only() if in_place else main()

@@ -117,5 +117,44 @@ for (const equipmentProfile of [GYM, HOME]) {
   for (const list of Object.values(beg)) for (const s of list) check(s.exercise.level === 'beginner', `gap beginner: ${s.exercise.name} is ${s.exercise.level}`)
 }
 
+// Swap list skips what is already in the day, and honours an explicit
+// level set (the generator's picks) over the app-wide cap.
+{
+  const inDay = new Set(['Dumbbell_Bench_Press', 'Cable_Chest_Press'])
+  const subs = cov.substitutesFor('Barbell_Bench_Press_-_Medium_Grip', { index, equipmentProfile: GYM, maxLevel: 'expert', excludeIds: inDay })
+  check(subs.length === 5 && !subs.some((s) => inDay.has(s.exercise.id)), `swap: excluded ids offered (${names(subs)})`)
+  for (const levels of [['beginner'], ['intermediate'], ['expert'], ['intermediate', 'expert']]) {
+    for (const id of ['Barbell_Squat', 'Pullups', 'Barbell_Bench_Press_-_Medium_Grip']) {
+      for (const s of cov.substitutesFor(id, { index, equipmentProfile: GYM, maxLevel: 'beginner', levels })) {
+        check(levels.includes(s.exercise.level), `swap levels ${levels}: ${s.exercise.name} is ${s.exercise.level}`)
+      }
+    }
+  }
+}
+
+// Data: the lifts whose muscle vectors were corrected (tools/enrich.py
+// SUB_OVERRIDES) now point at the right muscle.
+{
+  const MAJOR = Object.fromEntries((await import('../src/lib/taxonomy.js')).SUBGROUPS.map((s) => [s.id, s.major]))
+  const topMajor = (sub) => {
+    const t = {}
+    for (const [g, v] of Object.entries(sub)) t[MAJOR[g]] = (t[MAJOR[g]] || 0) + v
+    return Object.entries(t).sort((a, b) => b[1] - a[1])[0][0]
+  }
+  const topSub = (sub) => Object.entries(sub).sort((a, b) => b[1] - a[1])[0][0]
+  const byName = Object.fromEntries(exercises.map((e) => [e.name, e]))
+  for (const n of ['Bench Press - Powerlifting', 'Bench Press with Chains', 'Reverse Band Bench Press', 'Floor Press', 'Dumbbell Floor Press', 'One Arm Floor Press', 'Floor Press with Chains']) {
+    check(topMajor(byName[n].sub) === 'chest', `data: ${n} is not a chest move`)
+  }
+  for (const n of ['Dumbbell Lying Rear Lateral Raise', 'Dumbbell Lying One-Arm Rear Lateral Raise', 'Reverse Machine Flyes', 'Back Flyes - With Bands']) {
+    check(topSub(byName[n].sub) === 'delt_post', `data: ${n} is not a rear-delt move`)
+  }
+  check(topSub(byName['Hip Flexion with Band'].sub) === 'hip_flexor', 'data: Hip Flexion with Band is not a hip-flexor move')
+  const lat = cov.substitutesFor('Side_Lateral_Raise', { index, equipmentProfile: GYM, maxLevel: 'expert' })
+  check(!lat.some((s) => /rear/i.test(s.exercise.name)), `side lateral raise swaps offer a rear-delt move (${names(lat)})`)
+  const gaps = cov.suggestExercises({ statuses: { lat: allBelow.lat }, exercises, equipmentProfile: GYM, maxLevel: 'expert' })
+  check(!gaps.lat.some((s) => /bench|press/i.test(s.exercise.name)), `lats gap suggests a press (${names(gaps.lat)})`)
+}
+
 console.log(`coverage checks: ${failures} failed`)
 process.exit(failures ? 1 : 0)

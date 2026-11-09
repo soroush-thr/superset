@@ -542,12 +542,16 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch,
       state.settings.activeProfile,
       allEquipment(state.customExercises),
     )
+    // Nothing already in this day: a swap must not create a duplicate.
+    const inDay = new Set(day.slots.flatMap((s) => s.entries.map((e) => e.exerciseId)))
     return substitutesFor(entry.exerciseId, {
       index: exercisesIndex,
       equipmentProfile,
       maxLevel: state.settings.maxLevel,
+      excludeIds: inDay,
     })
   }, [
+    day.slots,
     entry.exerciseId,
     exercisesIndex,
     state.settings.equipmentProfiles,
