@@ -203,6 +203,12 @@ function AppShell() {
 
   useUndoRedoKeybinding()
 
+  // Screens share one window scroll (no router), so a new screen would
+  // otherwise open wherever the last one was scrolled to.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [activeScreen])
+
   // First-run wizard: no routines and no sessions yet, and it hasn't
   // already been dismissed. Sticky via onboardingComplete so clearing
   // everything later doesn't retrigger it.

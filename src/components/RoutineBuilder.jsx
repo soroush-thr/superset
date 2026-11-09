@@ -170,16 +170,18 @@ function RoutineSelector({ state, dispatch, routine }) {
           >
             Duplicate
           </button>
-          <ConfirmButton
-            confirmLabel="Tap to delete"
-            onConfirm={() => dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id })}
-          >
-            Delete
-          </ConfirmButton>
           <button type="button" onClick={printWithImages}>
             Print
           </button>
           <ShareButton routine={routine} />
+          {/* Last and visually quiet, away from the everyday actions. */}
+          <ConfirmButton
+            className="sx-quiet-danger"
+            confirmLabel="Tap to delete"
+            onConfirm={() => dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id })}
+          >
+            Delete routine
+          </ConfirmButton>
         </>
       )}
     </div>
@@ -382,10 +384,11 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
           &darr;
         </button>
         <ConfirmButton
+          className="sx-quiet-danger"
           confirmLabel="Tap to delete"
           onConfirm={() => dispatch({ type: 'DELETE_DAY', routineId: routine.id, dayId: day.id })}
         >
-          Delete
+          Delete day
         </ConfirmButton>
       </div>
 

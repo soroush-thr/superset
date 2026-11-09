@@ -183,40 +183,14 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal, r
             {kcal != null ? ` · ~${kcal} kcal` : ''}
             {` · ${doneSets}/${totalSets} sets`}
           </span>
-          <label className="sx-rest-pref">
-            <span className="sx-eyebrow">Rest</span>
-            <select
-              value={String(restPref)}
-              onChange={(e) =>
-                dispatch({
-                  type: 'UPDATE_SETTINGS',
-                  patch: { restPref: e.target.value === 'auto' ? 'auto' : Number(e.target.value) },
-                })
-              }
-            >
-              {REST_CHOICES.map((c) => (
-                <option key={c.value} value={String(c.value)}>
-                  {c.value === 'auto' ? 'Auto (by load)' : c.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
-        <div className="sx-session-actions">
-          <button
-            type="button"
-            className="sx-primary"
-            onClick={() => dispatch({ type: 'END_SESSION', sessionId: session.id })}
-          >
-            Finish
-          </button>
-          <ConfirmButton
-            confirmLabel="Tap to discard"
-            onConfirm={() => dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })}
-          >
-            Discard
-          </ConfirmButton>
-        </div>
+        <button
+          type="button"
+          className="sx-primary"
+          onClick={() => dispatch({ type: 'END_SESSION', sessionId: session.id })}
+        >
+          Finish
+        </button>
       </div>
       <div
         className="sx-session-progress"
@@ -237,16 +211,46 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal, r
           onCancel={() => dispatch({ type: 'SET_REST_TIMER', sessionId: session.id, restEndsAt: null })}
         />
       )}
+      {/* Everything that isn't needed between sets lives behind one line, so
+          the sticky bar stays short and Discard is nowhere near Finish. */}
       <details className="sx-session-note">
-        <summary>{session.note ? 'Notes & warm-up' : 'Add a note'}</summary>
+        <summary>{session.note ? 'Note & options' : 'Add a note · options'}</summary>
         <input
           className="sx-input"
           aria-label="Session note"
+          placeholder="Session note"
           value={session.note}
           onChange={(e) =>
             dispatch({ type: 'UPDATE_SESSION', sessionId: session.id, patch: { note: e.target.value } })
           }
         />
+        <div className="sx-session-options">
+          <label className="sx-rest-pref">
+            <span className="sx-eyebrow">Rest</span>
+            <select
+              value={String(restPref)}
+              onChange={(e) =>
+                dispatch({
+                  type: 'UPDATE_SETTINGS',
+                  patch: { restPref: e.target.value === 'auto' ? 'auto' : Number(e.target.value) },
+                })
+              }
+            >
+              {REST_CHOICES.map((c) => (
+                <option key={c.value} value={String(c.value)}>
+                  {c.value === 'auto' ? 'Auto (by load)' : c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ConfirmButton
+            className="sx-quiet-danger"
+            confirmLabel="Tap to discard"
+            onConfirm={() => dispatch({ type: 'DISCARD_SESSION', sessionId: session.id })}
+          >
+            Discard session
+          </ConfirmButton>
+        </div>
       </details>
     </div>
   )

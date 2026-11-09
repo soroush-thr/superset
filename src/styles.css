@@ -2375,3 +2375,126 @@ button.sx-thumb {
   font-size: var(--fs-1);
   white-space: nowrap;
 }
+
+/* ------------------------------------------------ session bar: short + opaque */
+
+/* The bar bleeds out to the content padding on both sides, so a card's
+   border (and the current card's 1px ring) can't show beside it while it
+   scrolls underneath. */
+.sx-session-bar {
+  margin: 0 -24px 12px;
+  padding: 8px 24px 8px;
+}
+
+/* One row that never wraps: the name and meta shrink, Finish stays put. */
+.sx-session-bar-top {
+  flex-wrap: nowrap;
+}
+
+.sx-session-bar-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sx-session-bar-title h2,
+.sx-session-bar-title .sx-eyebrow {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sx-session-bar-top > button {
+  flex-shrink: 0;
+}
+
+.sx-session-note summary {
+  padding: 4px 0;
+}
+
+.sx-session-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.sx-session-options .sx-rest-pref {
+  margin-top: 0;
+}
+
+.sx-session-options .sx-rest-pref select {
+  min-height: 36px;
+  font-size: var(--fs-2);
+}
+
+/* Auto-scroll to the next exercise lands below the sticky bar, not under it. */
+.sx-session-entry {
+  scroll-margin-top: 150px;
+}
+
+/* A destructive action that sits near everyday ones: no fill, no border,
+   dim until it is armed (ConfirmButton's .sx-armed turns it orange). */
+.sx-quiet-danger {
+  margin-left: auto;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+}
+
+.sx-quiet-danger:hover {
+  border-color: var(--over);
+  color: var(--over);
+}
+
+/* An unset weight shows its unit as a placeholder, smaller than a value. */
+.sx-set-row .sx-unset .sx-stepper-value {
+  font-size: var(--fs-2);
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+/* RPE chips are tapped mid-workout: tall enough for a thumb, with real gaps. */
+.sx-set-rpe {
+  gap: 6px;
+}
+
+.sx-rpe-chip {
+  max-width: 44px;
+  min-height: 36px;
+  font-size: var(--fs-2);
+}
+
+.sx-set-row {
+  row-gap: 6px;
+  padding-bottom: 8px;
+}
+
+/* Wide cards put RPE on the weight/reps line in a fixed 142px cell. */
+@container (min-width: 480px) {
+  .sx-set-rpe {
+    gap: 3px;
+  }
+
+  .sx-set-row {
+    padding-bottom: 4px;
+  }
+}
+
+/* Desktop: front and back both fit the sticky column's height, so the back
+   view is visible without scrolling the column. */
+@media (min-width: 900px) {
+  .sx-side .sx-bodymap {
+    height: calc(50vh - 32px);
+    max-height: 500px;
+    max-width: none;
+    margin-top: 0;
+  }
+
+  .sx-side .sx-bodymap + .sx-bodymap {
+    margin-top: 24px;
+  }
+}

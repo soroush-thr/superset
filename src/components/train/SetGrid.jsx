@@ -201,7 +201,7 @@ function SetRow({ index, set, shown, sec, unit, equipment, ownedWeights, removab
 
       <Stepper
         label={`set ${index + 1} weight`}
-        className={`sx-set-weight${weightGuessed ? ' sx-suggested' : ''}`}
+        className={`sx-set-weight${weightGuessed ? ' sx-suggested' : ''}${at < 0 ? ' sx-unset' : ''}`}
         decDisabled={at === 0}
         incDisabled={at === options.length - 1}
         onDec={() => stepWeight(-1)}
@@ -212,7 +212,8 @@ function SetRow({ index, set, shown, sec, unit, equipment, ownedWeights, removab
           value={at < 0 ? '' : String(at)}
           onChange={(e) => onWeight(e.target.value === '' ? null : options[Number(e.target.value)])}
         >
-          {at < 0 && <option value="">–</option>}
+          {/* The unit, not a dash: a dash between − and + reads as a third button. */}
+          {at < 0 && <option value="">{unit}</option>}
           {options.map((kg, i) => (
             <option key={i} value={String(i)}>
               {weightLabel(kg, unit, equipment)}
