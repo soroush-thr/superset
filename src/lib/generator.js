@@ -374,12 +374,25 @@ function mulberry32(seed) {
   }
 }
 
-/** Weighted draw among the best few scored candidates: near-ties vary from
- *  run to run, clear winners still win. `scored` is [{ meta, score }]. */
-function pickWeighted(scored, rng, { k = 5, temperature = 0.12 } = {}) {
+/** Weighted draw among the best scored candidates: near-ties vary from run
+ *  to run, clear winners still win more often. `scored` is [{ meta, score }].
+ *  Candidates more than `margin` below the best never qualify, so variety
+ *  never reaches into poor fits; within that window up to `k` compete with a
+ *  softmax at `temperature`. */
+function pickWeighted(scored, rng, { k = 5, temperature = 0.12, margin = Infinity } = {}) {
   if (scored.length === 0) return null
-  const top = [...scored].sort((a, b) => b.score - a.score).slice(0, k)
-  const best = top[0].score
+  // Shuffle before the (stable) sort so exact ties are cut at random. Many
+  // exercises share a weight vector (barbell / dumbbell / machine / cable
+  // versions of one press), and in dataset order the same ones always made
+  // the cut while their equals never got a chance.
+  const sorted = [...scored]
+  for (let i = sorted.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[sorted[i], sorted[j]] = [sorted[j], sorted[i]]
+  }
+  sorted.sort((a, b) => b.score - a.score)
+  const best = sorted[0].score
+  const top = sorted.filter((c) => c.score >= best - margin).slice(0, k)
   const weights = top.map((c) => Math.exp((c.score - best) / temperature))
   const total = weights.reduce((s, w) => s + w, 0)
   let r = rng() * total
@@ -389,6 +402,23 @@ function pickWeighted(scored, rng, { k = 5, temperature = 0.12 } = {}) {
   }
   return top[top.length - 1].meta
 }
+
+// How the main exercise picks sample. A wider window (anything within 0.35
+// of the best fit) at a softer temperature than before: a staple still wins
+// about four times as often as an equally good non-staple, but every decent
+// option for a slot shows up across regenerations instead of the same two
+// or three.
+const PICK = { k: 12, temperature: 0.2, margin: 0.35 }
+// Swaps are an explicit request for something else, so they sample a little
+// wider; variety across repeated swaps comes from skipping what the slot has
+// already shown, so the window can stay tight enough to keep out odd picks.
+const SWAP_PICK = { k: 12, temperature: 0.25, margin: 0.45 }
+
+// Repetition penalties: exercises from the last session, from the past
+// week, and from the workout being replaced by "Generate a new workout".
+const LAST_SESSION_PENALTY = 0.3
+const RECENT_PENALTY = 0.15
+const AVOID_PENALTY = 0.35
 
 // ------------------------------------------------------ context + demand
 
@@ -403,6 +433,10 @@ export function buildContext({ exercises, targets, sessions = [], favorites = []
   const volumeIn = (days) =>
     volumeForEntries(sessionSetCounts(sessionsInWindow(finished, days)), byId, creditMode)
   const last = [...finished].sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt))[0]
+  const recentIds = new Set()
+  for (const s of sessionsInWindow(finished, 7)) {
+    for (const e of s.entries) if (e.kind !== 'cooldown') recentIds.add(e.exerciseId)
+  }
   return {
     exercises,
     byId,
@@ -411,6 +445,7 @@ export function buildContext({ exercises, targets, sessions = [], favorites = []
     recoveryVolume: volumeIn(2),
     favorites: new Set(favorites),
     lastIds: new Set(last ? last.entries.map((e) => e.exerciseId) : []),
+    recentIds,
   }
 }
 
@@ -482,12 +517,17 @@ function scoreCandidate(meta, st, ctx, position, total, goal) {
   if (STAPLES.has(meta.ex.id)) score += 0.3
   if (meta.ex.conf === 'med') score -= 0.05
   if (ctx.favorites?.has(meta.ex.id)) score += 0.1
-  if (ctx.lastIds?.has(meta.ex.id)) score -= 0.25
+  if (ctx.lastIds?.has(meta.ex.id)) score -= LAST_SESSION_PENALTY
+  else if (ctx.recentIds?.has(meta.ex.id)) score -= RECENT_PENALTY
+  if (st.avoid?.has(meta.ex.id)) score -= AVOID_PENALTY
   if (st.intermediateUp && meta.ex.level !== 'beginner') score += 0.1
   // In a gym, loaded work beats improvised bodyweight/band versions -- except
   // where bodyweight is the standard tool (core, pull-ups).
-  if (st.gym && !STANDARD_BODYWEIGHT.test(meta.ex.name) && meta.pattern !== 'core') {
-    if (['body only', 'bands', 'other', 'exercise ball', 'medicine ball', 'foam roll'].includes(meta.ex.equipment)) score -= 0.2
+  // Push-ups stay in play, a notch below loaded presses.
+  if (st.gym && meta.pattern !== 'core') {
+    const improvised = ['body only', 'bands', 'other', 'exercise ball', 'medicine ball', 'foam roll'].includes(meta.ex.equipment)
+    if (improvised && !STANDARD_BODYWEIGHT.test(meta.ex.name)) score -= 0.2
+    else if (improvised && NO_BENCH_NEEDED.test(meta.ex.name)) score -= 0.1
   }
   return score
 }
@@ -501,7 +541,7 @@ function registerPick(st, meta) {
   }
 }
 
-function newPickState(params, sp, n) {
+function newPickState(params, sp, n, avoid = null) {
   const covered = {}
   const remaining = {}
   for (const g of sp.scope) {
@@ -516,6 +556,7 @@ function newPickState(params, sp, n) {
     chosen: [],
     intermediateUp: trainingLevel(params) !== 'beginner',
     gym: params.location === 'gym',
+    avoid: avoid && avoid.size ? avoid : null,
   }
 }
 
@@ -793,11 +834,15 @@ function patternSpecs(majors) {
  * `equipment` resolved to an array); `ctx` comes from buildContext; `seed`
  * makes the result reproducible.
  *
+ * `options.avoid` is a list of exercise ids to steer away from (the workout
+ * a regenerate replaces), so pressing "Generate a new workout" really gives
+ * a different one.
+ *
  * Returns { seed, params, name, items, cooldown, warmupNote, cooldownNote,
  * estMin, warnings, unreachable }. `items` are
  * { exerciseId, sets, repMin, repMax, restSec, pairId, pattern, compound }.
  */
-export function generateWorkout(params, ctx, seed) {
+export function generateWorkout(params, ctx, seed, options = {}) {
   const rng = mulberry32(seed)
   const warnings = []
   const base = { seed, params, name: workoutName(params) }
@@ -824,7 +869,7 @@ export function generateWorkout(params, ctx, seed) {
     return { ...base, items: [], cooldown: [], warmupNote: '', cooldownNote: '', estMin: 0, unreachable: [...sp.scope], warnings: [{ kind: 'empty', text: 'No exercises match this equipment, level and muscle selection.' }] }
   }
 
-  const st = newPickState(params, sp, n)
+  const st = newPickState(params, sp, n, new Set(options.avoid || []))
   const taken = () => new Set(st.chosen.map((c) => c.ex.id))
 
   // Phase 1: one exercise per movement pattern (full coverage of the body's
@@ -840,7 +885,7 @@ export function generateWorkout(params, ctx, seed) {
       meta: m,
       score: scoreCandidate(m, st, ctx, st.chosen.length, n, params.goal),
     }))
-    const pick = pickWeighted(scored, rng)
+    const pick = pickWeighted(scored, rng, PICK)
     if (pick) registerPick(st, pick)
   }
 
@@ -851,7 +896,7 @@ export function generateWorkout(params, ctx, seed) {
     const scored = sp.pool
       .filter((m) => !ids.has(m.ex.id))
       .map((m) => ({ meta: m, score: scoreCandidate(m, st, ctx, st.chosen.length, n, params.goal) }))
-    const pick = pickWeighted(scored, rng)
+    const pick = pickWeighted(scored, rng, PICK)
     if (!pick) break
     registerPick(st, pick)
   }
@@ -920,22 +965,56 @@ export function swapExercise(workout, index, ctx, seed) {
     if (m) registerPick(st, m)
   }
 
-  const ids = new Set(workout.items.map((it) => it.exerciseId))
-  const scored = sp.pool
-    .filter((m) => !ids.has(m.ex.id))
-    .map((m) => ({
-      meta: m,
-      score: scoreCandidate(m, st, ctx, index, workout.items.length, params.goal) + (m.pattern === old.pattern ? 0.4 : 0) +
-        (m.compound === old.compound ? 0.3 : 0),
-    }))
-  const pick = pickWeighted(scored, rng)
+  // Every exercise this slot has already shown is skipped, so repeated swaps
+  // walk through new options instead of bouncing between the same two. Once
+  // the slot has shown every option of its pattern, the history starts over
+  // rather than drifting into other patterns (a squat slot stays a squat).
+  const inWorkout = new Set(workout.items.map((it) => it.exerciseId))
+  let seen = new Set([...(old.swapSeen || []), old.exerciseId])
+  const free = (exclude) => sp.pool.filter((m) => !inWorkout.has(m.ex.id) && !exclude.has(m.ex.id))
+  // Same movement pattern, and compounds for a compound, the way the slot
+  // was filled; isolation of the same pattern if no compound is left.
+  const narrow = (list) => {
+    const samePattern = list.filter((m) => m.pattern === old.pattern)
+    const sameKind = samePattern.filter((m) => m.compound === old.compound)
+    return sameKind.length ? sameKind : samePattern
+  }
+  let pool = narrow(free(seen))
+  if (pool.length === 0) {
+    const fresh = new Set([old.exerciseId])
+    const restart = narrow(free(fresh))
+    if (restart.length) {
+      seen = fresh
+      pool = restart
+    } else {
+      // Nothing else of this pattern exists here: any pattern will do.
+      pool = free(seen)
+      if (pool.length === 0) {
+        seen = fresh
+        pool = free(seen)
+      }
+    }
+  }
+  const scored = pool.map((m) => ({
+    meta: m,
+    score:
+      scoreCandidate(m, st, ctx, index, workout.items.length, params.goal) +
+      (m.pattern === old.pattern ? 0.4 : 0) +
+      (m.compound === old.compound ? 0.3 : 0),
+  }))
+  const pick = pickWeighted(scored, rng, SWAP_PICK)
   if (!pick) return workout
 
   // A swapped move can break a superset's compatibility, so unpair it.
   const items = workout.items.map((it) => ({ ...it }))
   if (old.pairId) for (const it of items) if (it.pairId === old.pairId) it.pairId = null
   const fresh = prescribe(pick, params, index)
-  items[index] = { ...fresh, sets: old.sets, restSec: old.restSec === old.autoRestSec ? fresh.restSec : old.restSec }
+  items[index] = {
+    ...fresh,
+    sets: old.sets,
+    restSec: old.restSec === old.autoRestSec ? fresh.restSec : old.restSec,
+    swapSeen: [...seen],
+  }
 
   return retime({ ...workout, items })
 }

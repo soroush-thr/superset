@@ -110,7 +110,9 @@ export default function Generate({ onStarted }) {
 
   function generate() {
     setSaved(false)
-    setWorkout(generateWorkout({ ...form, restPref }, ctx, randomSeed()))
+    // Steer away from the workout on screen so a regenerate is really new.
+    const avoid = workout ? workout.items.map((it) => it.exerciseId) : []
+    setWorkout(generateWorkout({ ...form, restPref }, ctx, randomSeed(), { avoid }))
     dispatch({ type: 'UPDATE_SETTINGS', patch: { generator: form } })
   }
 

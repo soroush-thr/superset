@@ -170,6 +170,88 @@ for (const seed of [1, 2, 3, 4, 5, 6]) {
   }
 }
 
+// Variety per slot: across many seeds each basic pattern of a gym full-body
+// day draws from a real spread of exercises, not a fixed two or three, and
+// with or without "favour undertrained".
+for (const favourUndertrained of [false, true]) {
+  const p = base({ majors: ALL_MAJORS, equipment: GYM, favourUndertrained })
+  const byPattern = {}
+  const all = new Set()
+  for (let s = 1; s <= 200; s++) {
+    for (const it of gen.generateWorkout(p, ctx, s * 7919).items) {
+      ;(byPattern[it.pattern] ||= new Set()).add(it.exerciseId)
+      all.add(it.exerciseId)
+    }
+  }
+  check(all.size >= 70, `full body fav=${favourUndertrained}: only ${all.size} distinct exercises over 200 seeds`)
+  // A gym has about four sensible vertical pulls (pull-up, chin-up and two
+  // pulldowns); every other basic pattern has many more.
+  for (const [pat, min] of [['squat', 7], ['hinge', 7], ['hpush', 7], ['hpull', 7], ['vpush', 7], ['vpull', 4], ['core', 7]]) {
+    check((byPattern[pat]?.size || 0) >= min,`full body fav=${favourUndertrained}: ${pat} only ${byPattern[pat]?.size || 0} distinct`)
+  }
+  // Exact score ties (same press on barbell / dumbbell / machine) must all
+  // get a chance -- the flat bench press used to lose every tie on order.
+  const hpush = byPattern.hpush || new Set()
+  check(
+    ['Barbell_Bench_Press_-_Medium_Grip', 'Dumbbell_Bench_Press', 'Machine_Bench_Press', 'Cable_Chest_Press'].some((id) => hpush.has(id)),
+    `full body fav=${favourUndertrained}: no flat press ever picked (${[...hpush]})`,
+  )
+}
+
+// Regenerate steers away from the workout on screen.
+{
+  const p = base({ majors: ALL_MAJORS, equipment: GYM })
+  let repeated = 0
+  let prev = gen.generateWorkout(p, ctx, 1)
+  for (let s = 2; s <= 60; s++) {
+    const w = gen.generateWorkout(p, ctx, s, { avoid: prev.items.map((i) => i.exerciseId) })
+    const before = new Set(prev.items.map((i) => i.exerciseId))
+    repeated += w.items.filter((i) => before.has(i.exerciseId)).length
+    prev = w
+  }
+  check(repeated / 59 < 0.5, `regenerate repeats ${(repeated / 59).toFixed(2)} exercises on average`)
+}
+
+// Repeated swaps of one slot walk through new options of the same pattern,
+// stay valid and deterministic, and start over once the slot is exhausted.
+for (const [loc, equipment] of [['gym', GYM], ['home', HOME]]) {
+  const p = base({ majors: ALL_MAJORS, location: loc, equipment, hasBar: loc === 'gym', hasBench: loc === 'gym' })
+  const w0 = gen.generateWorkout(p, ctx, 21)
+  for (let i = 0; i < w0.items.length; i++) {
+    let w = w0
+    const seen = new Set([w0.items[i].exerciseId])
+    let firstRepeat = null // distinct count when an exercise first came back
+    let samePattern = 0
+    for (let k = 0; k < 10; k++) {
+      const next = gen.swapExercise(w, i, ctx, 500 + k)
+      check(JSON.stringify(gen.swapExercise(w, i, ctx, 500 + k).items) === JSON.stringify(next.items), `${loc} swap ${i}: not deterministic`)
+      const ids = next.items.map((x) => x.exerciseId)
+      check(new Set(ids).size === ids.length, `${loc} swap ${i}.${k}: duplicate`)
+      check(ids[i] !== w.items[i].exerciseId, `${loc} swap ${i}.${k}: unchanged`)
+      if (next.items[i].pattern === w0.items[i].pattern) samePattern += 1
+      if (seen.has(ids[i]) && firstRepeat == null) firstRepeat = seen.size
+      seen.add(ids[i])
+      w = next
+    }
+    const name = ctx.byId[w0.items[i].exerciseId].name
+    // Nothing comes back until every option has been shown once.
+    check(firstRepeat == null || firstRepeat === seen.size, `${loc} swap slot ${i} (${name}): repeated after ${firstRepeat} of ${seen.size} options`)
+    if (loc === 'gym') check(seen.size >= 9, `gym swap slot ${i} (${name}): only ${seen.size} distinct in 10 swaps`)
+    else check(seen.size >= 3, `home swap slot ${i} (${name}): only ${seen.size} distinct in 10 swaps`)
+    check(samePattern === 10, `${loc} swap slot ${i} (${name}): pattern changed in ${10 - samePattern} of 10 swaps`)
+  }
+}
+{
+  // A tiny pool: swapping keeps working after every option has been shown.
+  const p = base({ type: 'targeted', majors: ['chest'], location: 'home', equipment: ['body only'], hasBar: false, hasBench: false, durationMin: null, moves: 2 })
+  let w = gen.generateWorkout(p, ctx, 3)
+  for (let k = 0; k < 40; k++) {
+    const next = gen.swapExercise(w, 0, ctx, 900 + k)
+    check(next.items[0].exerciseId !== w.items[0].exerciseId, `tiny pool swap ${k}: stuck`)
+    w = next
+  }
+}
+
 // Bar / bench gating at home.
 {
   const p = base({ majors: ['back'], location: 'home', equipment: HOME, hasBar: false, hasBench: false, durationMin: null, moves: 6 })
