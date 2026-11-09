@@ -1,5 +1,6 @@
 // All weekly-volume math. Pure functions, no React imports, no side effects.
 // See BUILD-PLAN.md section 6 for the model this implements.
+import { STAPLES } from './staples.js'
 
 const LEVEL_ORDER = { beginner: 0, intermediate: 1, expert: 2 }
 
@@ -164,6 +165,9 @@ export function suggestExercises({
   const eligible = exercises.filter((e) => {
     if (excludeIds.has(e.id)) return false
     if (!equipmentSet.has(e.equipment)) return false
+    // Routine volume comes from lifting: no stretches, cardio, strongman,
+    // plyometrics or Olympic lifts as gap fillers.
+    if (!TRAINING_CATEGORIES.has(categoryOf(e))) return false
     const levelRank = LEVEL_ORDER[e.level] ?? LEVEL_ORDER.expert
     if (levelRank > maxLevelRank) return false
     return true
@@ -183,12 +187,20 @@ export function suggestExercises({
     for (const exercise of eligible) {
       const score = scoreExercise(exercise, subgroupId, saturatedGroups)
       if (score === null) continue
-      scored.push({ exercise, score })
+      // Every exercise whose main muscle is the gap scores the same peak
+      // weight; how much of its total load lands there separates a focused
+      // move from one that just happens to peak there.
+      const rank = score + GAP_FOCUS_WEIGHT * loadShare(exercise.sub, subgroupId) + qualityBonus(exercise, GAP_STAPLE_BONUS)
+      scored.push({ exercise, score, rank })
     }
-    scored.sort((a, b) => b.score - a.score)
-    result[subgroupId] = scored.slice(0, 5)
+    result[subgroupId] = pickDiverse(scored, 5)
   }
   return result
+}
+
+function loadShare(sub, g) {
+  const total = Object.values(sub || {}).reduce((s, v) => s + v, 0)
+  return total > 0 ? (sub[g] || 0) / total : 0
 }
 
 function cosineSimilarity(a, b) {
@@ -221,19 +233,73 @@ export function substitutesFor(exerciseId, { index, equipmentProfile, maxLevel, 
 
   const maxLevelRank = LEVEL_ORDER[maxLevel] ?? LEVEL_ORDER.expert
   const equipmentSet = new Set(equipmentProfile)
+  const allowed = substituteCategories(source)
 
   const scored = []
   for (const candidate of index.list) {
     if (candidate.id === exerciseId || !candidate.sub) continue
     if (!equipmentSet.has(candidate.equipment)) continue
+    if (!allowed.has(categoryOf(candidate))) continue
     const levelRank = LEVEL_ORDER[candidate.level] ?? LEVEL_ORDER.expert
     if (levelRank > maxLevelRank) continue
     const score = cosineSimilarity(source.sub, candidate.sub)
     if (score <= 0) continue
-    scored.push({ exercise: candidate, score })
+    scored.push({ exercise: candidate, score, rank: score + qualityBonus(candidate, SUB_STAPLE_BONUS) })
   }
-  scored.sort((a, b) => b.score - a.score)
-  return scored.slice(0, n)
+  return pickDiverse(scored, n)
+}
+
+// ------------------------------------------------ ranking helpers (6.5, subs)
+//
+// Both lists rank by a score that ties a lot: dozens of exercises share one
+// weight vector (the barbell / dumbbell / machine / cable / band version of a
+// press), so cosine similarity is exactly 1.0 for all of them, and the gap
+// score is the same for every exercise whose main muscle is the gap. Cutting
+// the top 5 in dataset order then always showed the same alphabetical few
+// ("Around The Worlds", "Bench Press - With Bands"...) and buried the staples.
+// So: a small bonus for mainstream lifts, a small penalty for low-confidence
+// data, ties broken by name explicitly, and at most two picks per equipment
+// type so the list reads as real alternatives.
+
+const TRAINING_CATEGORIES = new Set(['strength', 'powerlifting'])
+const SUB_STAPLE_BONUS = 0.06 // beats a perfect obscure match only from >= 0.94
+const GAP_STAPLE_BONUS = 0.15
+const LOW_CONFIDENCE_PENALTY = 0.02
+const GAP_FOCUS_WEIGHT = 0.3
+const MAX_PER_EQUIPMENT = 2
+
+// Custom exercises are created as strength moves.
+const categoryOf = (e) => e.category ?? 'strength'
+
+/** A stretch swaps for a stretch; a lift for a strength or powerlifting move
+ *  (or one of its own kind, so an Olympic lift can swap for another). */
+function substituteCategories(source) {
+  const c = categoryOf(source)
+  return TRAINING_CATEGORIES.has(c) ? TRAINING_CATEGORIES : new Set([c, ...(c === 'stretching' ? [] : TRAINING_CATEGORIES)])
+}
+
+function qualityBonus(exercise, stapleBonus) {
+  return (STAPLES.has(exercise.id) ? stapleBonus : 0) - (exercise.conf === 'med' ? LOW_CONFIDENCE_PENALTY : 0)
+}
+
+/** Best `n` by rank (ties by name), at most MAX_PER_EQUIPMENT per equipment
+ *  type unless that leaves the list short. */
+function pickDiverse(scored, n) {
+  scored.sort((a, b) => b.rank - a.rank || a.exercise.name.localeCompare(b.exercise.name))
+  const out = []
+  const perEquipment = {}
+  for (const s of scored) {
+    if (out.length >= n) break
+    const eq = s.exercise.equipment
+    if ((perEquipment[eq] || 0) >= MAX_PER_EQUIPMENT) continue
+    perEquipment[eq] = (perEquipment[eq] || 0) + 1
+    out.push(s)
+  }
+  for (const s of scored) {
+    if (out.length >= n) break
+    if (!out.includes(s)) out.push(s)
+  }
+  return out.map(({ exercise, score }) => ({ exercise, score }))
 }
 
 /** Scale a { subgroupId: number } volume map by a flat factor -- used to

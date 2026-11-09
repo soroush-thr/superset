@@ -11,6 +11,7 @@
 import { SUBGROUPS, SUBGROUP_BY_ID, MAJORS } from './taxonomy.js'
 import { volumeForEntries } from './coverage.js'
 import { sessionsInWindow, sessionSetCounts } from './sessions.js'
+import { STAPLES } from './staples.js'
 
 // ------------------------------------------------------------- defaults
 
@@ -138,35 +139,9 @@ const PATTERN_MAJOR = {
 // than patterns. Interleaves lower/upper and push/pull.
 const PATTERN_PRIORITY = ['squat', 'hpush', 'hpull', 'core', 'hinge', 'vpush', 'vpull', 'biceps', 'triceps']
 
-// The dataset has 876 entries, many of them obscure variations. Mainstream
-// lifts get a score bonus so generated workouts read like a real program;
-// the weighted draw still varies which ones show up.
-export const STAPLES = new Set(`
-Barbell_Bench_Press_-_Medium_Grip Barbell_Incline_Bench_Press_-_Medium_Grip Decline_Barbell_Bench_Press
-Dumbbell_Bench_Press Incline_Dumbbell_Press Decline_Dumbbell_Bench_Press Dumbbell_Flyes Incline_Dumbbell_Flyes
-Cable_Crossover Low_Cable_Crossover Cable_Chest_Press Incline_Cable_Chest_Press Machine_Bench_Press
-Leverage_Chest_Press Leverage_Incline_Chest_Press Leverage_Decline_Chest_Press Butterfly Pushups Incline_Push-Up
-Decline_Push-Up Dips_-_Chest_Version Smith_Machine_Bench_Press
-Wide-Grip_Lat_Pulldown Close-Grip_Front_Lat_Pulldown Seated_Cable_Rows One-Arm_Dumbbell_Row T-Bar_Row_with_Handle
-Bent_Over_Barbell_Row Pullups Chin-Up Face_Pull Reverse_Flyes Barbell_Shrug Dumbbell_Shrug
-Hyperextensions_Back_Extensions Inverted_Row Leverage_Iso_Row Lying_T-Bar_Row Good_Morning
-Barbell_Squat Barbell_Full_Squat Front_Squat_Clean_Grip Goblet_Squat Dumbbell_Squat Hack_Squat Leg_Press
-Dumbbell_Lunges Barbell_Lunge Barbell_Walking_Lunge Split_Squat_with_Dumbbells Leg_Extensions Lying_Leg_Curls
-Seated_Leg_Curl Standing_Leg_Curl Romanian_Deadlift Barbell_Deadlift Stiff-Legged_Barbell_Deadlift
-Stiff-Legged_Dumbbell_Deadlift Sumo_Deadlift Barbell_Hip_Thrust Barbell_Glute_Bridge Single_Leg_Glute_Bridge
-Standing_Calf_Raises Seated_Calf_Raise Standing_Dumbbell_Calf_Raise Bodyweight_Squat Smith_Machine_Squat
-Trap_Bar_Deadlift Dumbbell_Rear_Lunge Bodyweight_Walking_Lunge
-Standing_Military_Press Seated_Barbell_Military_Press Dumbbell_Shoulder_Press Arnold_Dumbbell_Press
-Machine_Shoulder_Military_Press Side_Lateral_Raise Seated_Side_Lateral_Raise Cable_Seated_Lateral_Raise
-Cable_Rear_Delt_Fly Seated_Bent-Over_Rear_Delt_Raise Leverage_Shoulder_Press Standing_Dumbbell_Upright_Row
-Lateral_Raise_-_With_Bands Shoulder_Press_-_With_Bands
-Barbell_Curl EZ-Bar_Curl Dumbbell_Bicep_Curl Dumbbell_Alternate_Bicep_Curl Hammer_Curls Incline_Dumbbell_Curl
-Preacher_Curl Concentration_Curls Standing_Biceps_Cable_Curl Triceps_Pushdown Dips_-_Triceps_Version
-EZ-Bar_Skullcrusher Standing_Dumbbell_Triceps_Extension Cable_Rope_Overhead_Triceps_Extension
-Dumbbell_One-Arm_Triceps_Extension Tricep_Dumbbell_Kickback
-Plank Crunches Hanging_Leg_Raise Cable_Crunch Russian_Twist Ab_Roller Reverse_Crunch Side_Bridge Dead_Bug
-Oblique_Crunches Flat_Bench_Lying_Leg_Raise Decline_Crunch Exercise_Ball_Crunch
-`.split(/\s+/).filter(Boolean))
+// Mainstream lifts (staples.js) get a score bonus so generated workouts read
+// like a real program; the weighted draw still varies which ones show up.
+export { STAPLES }
 
 const HEAVY_PATTERNS = new Set(['squat', 'hinge', 'hpush', 'vpush', 'hpull', 'vpull'])
 const UPPER_PATTERNS = new Set(['hpush', 'vpush', 'hpull', 'vpull', 'rear', 'lateral', 'shrug', 'biceps', 'triceps', 'forearm'])

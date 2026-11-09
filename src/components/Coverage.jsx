@@ -366,7 +366,7 @@ function GapPanel({ state, routine, statuses, dispatch, exercises }) {
                 </li>
               ))}
               {(suggestions[id] ?? []).length === 0 && (
-                <li className="sx-empty-state">No candidates match the active equipment profile.</li>
+                <li className="sx-empty-state">No lifts for this muscle match your equipment and level.</li>
               )}
             </ul>
           )}
