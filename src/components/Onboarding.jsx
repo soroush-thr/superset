@@ -9,6 +9,23 @@ import Segmented from './ui/Segmented.jsx'
  * (App.jsx), so it never re-appears for anyone with real data -- including
  * someone who deletes everything, since COMPLETE_ONBOARDING is sticky.
  */
+const TEMPLATE_BLURBS = {
+  ppl: 'Push / pull / legs, built around your week',
+  'upper-lower': 'Alternating upper and lower body',
+  'full-body': 'Every session trains the whole body',
+}
+const TEMPLATE_LEVELS = {
+  ppl: 'intermediate',
+  'upper-lower': 'all levels',
+  'full-body': 'beginner friendly',
+}
+const STEP_COUNT = 3
+
+function templateLine(t) {
+  const days = `${t.days.length} day${t.days.length === 1 ? '' : 's'}`
+  return `${days} \u00b7 ${TEMPLATE_LEVELS[t.id] ?? 'all levels'}`
+}
+
 export default function Onboarding({ onDone }) {
   const dispatch = useDispatch()
   const [step, setStep] = useState(0)
@@ -25,7 +42,12 @@ export default function Onboarding({ onDone }) {
   return (
     <div className="sx-onboarding">
       <div className="sx-onboarding-card">
-        <span className="sx-eyebrow">Welcome to Superset</span>
+        <div className="sx-onboarding-top">
+          <span className="sx-eyebrow">Welcome to Superset</span>
+          <span className="sx-eyebrow sx-num">
+            Step {step + 1} of {STEP_COUNT}
+          </span>
+        </div>
 
         {step === 0 && (
           <>
@@ -56,9 +78,14 @@ export default function Onboarding({ onDone }) {
                 { value: 'lb', label: 'lb' },
               ]}
             />
-            <button type="button" className="sx-primary" onClick={() => setStep(2)}>
-              Next
+            <div className="sx-onboarding-nav">
+            <button type="button" className="sx-onboarding-back" onClick={() => setStep(0)}>
+              Back
             </button>
+              <button type="button" className="sx-primary" onClick={() => setStep(2)}>
+                Next
+              </button>
+            </div>
           </>
         )}
 
@@ -66,16 +93,23 @@ export default function Onboarding({ onDone }) {
           <>
             <h2>Start from a template?</h2>
             <p className="sx-helper-text">Or skip this and build your own routine from scratch.</p>
-            <div className="sx-chip-row">
+            <div className="sx-template-list">
               {TEMPLATES.map((t) => (
-                <button key={t.id} type="button" className="sx-primary" onClick={() => finish(t.id)}>
-                  {t.name}
+                <button key={t.id} type="button" className="sx-template-option" onClick={() => finish(t.id)}>
+                  <b>{t.name}</b>
+                  <span className="sx-num">{templateLine(t)}</span>
+                  {TEMPLATE_BLURBS[t.id] && <span>{TEMPLATE_BLURBS[t.id]}</span>}
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => finish(null)}>
-              Skip, I'll build my own
+            <div className="sx-onboarding-nav">
+            <button type="button" className="sx-onboarding-back" onClick={() => setStep(1)}>
+              Back
             </button>
+              <button type="button" onClick={() => finish(null)}>
+                Skip, I'll build my own
+              </button>
+            </div>
           </>
         )}
       </div>

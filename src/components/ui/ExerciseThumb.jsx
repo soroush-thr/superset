@@ -15,7 +15,9 @@ export default function ExerciseThumb({ exercise, size = 'md', onClick }) {
 
   const body =
     frames.length === 0 || failed ? (
-      <span className="sx-thumb-blank" aria-hidden="true" />
+      <span className="sx-thumb-blank" aria-hidden="true">
+        {(exercise?.name ?? '?').charAt(0).toUpperCase()}
+      </span>
     ) : (
       frames.map((src, i) => (
         <img

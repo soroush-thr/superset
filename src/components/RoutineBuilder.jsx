@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmButton from './ui/ConfirmButton.jsx'
 import ExerciseThumb from './ui/ExerciseThumb.jsx'
 import { useStore, useBodyMapFeed, useExercises } from '../App.jsx'
@@ -122,10 +122,38 @@ export default function RoutineBuilder() {
 }
 
 function RoutineSelector({ state, dispatch, routine }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+
+  // Close on outside tap / Escape so the menu never lingers over the list.
+  useEffect(() => {
+    if (!menuOpen) return undefined
+    function onDown(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  function run(fn) {
+    return () => {
+      setMenuOpen(false)
+      fn()
+    }
+  }
+
   return (
     <div className="sx-routine-selector">
       <select
-        className="sx-input"
+        className="sx-input sx-routine-picker"
+        aria-label="Routine"
         value={state.activeRoutineId ?? ''}
         onChange={(e) => dispatch({ type: 'SET_ACTIVE_ROUTINE', routineId: e.target.value })}
       >
@@ -135,55 +163,81 @@ function RoutineSelector({ state, dispatch, routine }) {
           </option>
         ))}
       </select>
-      <button type="button" onClick={() => dispatch({ type: 'CREATE_ROUTINE', name: 'New Routine' })}>
-        New
-      </button>
-      <select
-        className="sx-input sx-template-select"
-        value=""
-        onChange={(e) => {
-          if (e.target.value) dispatch({ type: 'INSTANTIATE_TEMPLATE', templateId: e.target.value })
-          e.target.value = ''
-        }}
-      >
-        <option value="">New from template...</option>
-        {TEMPLATES.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-      {routine && (
-        <>
-          <button
-            type="button"
-            onClick={() => {
-              const name = window.prompt('Rename routine', routine.name)
-              if (name) dispatch({ type: 'RENAME_ROUTINE', routineId: routine.id, name })
-            }}
-          >
-            Rename
-          </button>
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'DUPLICATE_ROUTINE', routineId: routine.id })}
-          >
-            Duplicate
-          </button>
-          <button type="button" onClick={printWithImages}>
-            Print
-          </button>
-          <ShareButton routine={routine} />
-          {/* Last and visually quiet, away from the everyday actions. */}
-          <ConfirmButton
-            className="sx-quiet-danger"
-            confirmLabel="Tap to delete"
-            onConfirm={() => dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id })}
-          >
-            Delete routine
-          </ConfirmButton>
-        </>
-      )}
+      <div className="sx-menu-wrap" ref={menuRef}>
+        <button
+          type="button"
+          className="sx-menu-trigger"
+          aria-label="Routine actions"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          &#8943;
+        </button>
+        {menuOpen && (
+          <div className="sx-menu" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={run(() => dispatch({ type: 'CREATE_ROUTINE', name: 'New Routine' }))}
+            >
+              New routine
+            </button>
+            <select
+              className="sx-input sx-template-select"
+              aria-label="New from template"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) {
+                  dispatch({ type: 'INSTANTIATE_TEMPLATE', templateId: e.target.value })
+                  setMenuOpen(false)
+                }
+              }}
+            >
+              <option value="">New from template...</option>
+              {TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            {routine && (
+              <>
+                <hr />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={run(() => {
+                    const name = window.prompt('Rename routine', routine.name)
+                    if (name) dispatch({ type: 'RENAME_ROUTINE', routineId: routine.id, name })
+                  })}
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={run(() => dispatch({ type: 'DUPLICATE_ROUTINE', routineId: routine.id }))}
+                >
+                  Duplicate
+                </button>
+                <button type="button" role="menuitem" onClick={run(printWithImages)}>
+                  Print
+                </button>
+                <ShareButton routine={routine} />
+                <hr />
+                <ConfirmButton
+                  className="sx-quiet-danger"
+                  confirmLabel="Tap to delete"
+                  onConfirm={run(() => dispatch({ type: 'DELETE_ROUTINE', routineId: routine.id }))}
+                >
+                  Delete routine
+                </ConfirmButton>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -226,10 +280,9 @@ function ShareButton({ routine }) {
 
   return (
     <span className="sx-share">
-      <button type="button" onClick={handleShare}>
-        Share
+      <button type="button" role="menuitem" onClick={handleShare}>
+        {state === 'copied' ? 'Link copied' : 'Share'}
       </button>
-      {state === 'copied' && <span className="sx-helper-text">Link copied.</span>}
       {state === 'error' && <span className="sx-helper-text">Couldn't create a share link.</span>}
       {state === 'fallback' && (
         <label className="sx-field">
@@ -247,8 +300,24 @@ function ShareButton({ routine }) {
 }
 
 function RoutineEditor({ routine, dispatch, exercisesById }) {
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const weekCount = weeksWithDefault(routine).length
   return (
     <div>
+      <button
+        type="button"
+        className="sx-collapse-toggle"
+        aria-expanded={scheduleOpen}
+        onClick={() => setScheduleOpen((o) => !o)}
+      >
+        <span>Cycle &amp; deload</span>
+        <span className="sx-collapse-summary sx-num">
+          {routine.cycleDays}-day cycle
+          {weekCount > 1 ? ` \u00b7 ${weekCount} weeks` : ''}
+        </span>
+        <span aria-hidden="true">{scheduleOpen ? '\u25b4' : '\u25be'}</span>
+      </button>
+      <div className={`sx-schedule-body${scheduleOpen ? '' : ' sx-hidden-screen'}`}>
       <div className="sx-cycle-days">
         <NumberField
           label="Cycle days"
@@ -264,6 +333,7 @@ function RoutineEditor({ routine, dispatch, exercisesById }) {
       </div>
 
       <WeeksEditor routine={routine} dispatch={dispatch} />
+      </div>
 
       {routine.days.map((day, i) => (
         <DayCard
@@ -534,7 +604,19 @@ function SlotEditor({ routine, day, slot, pairLetter, canMergeWithNext, dispatch
   )
 }
 
+function entrySummary(entry) {
+  const reps =
+    entry.repMin === entry.repMax || !entry.repMax ? `${entry.repMin}` : `${entry.repMin}\u2013${entry.repMax}`
+  const parts = [`${entry.sets} \u00d7 ${reps}`]
+  if (entry.restSec) parts.push(`${entry.restSec}s`)
+  if (entry.rpe) parts.push(`RPE ${entry.rpe}`)
+  if (entry.setType && entry.setType !== 'normal') parts.push(entry.setType)
+  return parts.join(' \u00b7 ')
+}
+
 function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch, exercisesById }) {
+  const [open, setOpen] = useState(false)
+  const [more, setMore] = useState(false)
   const exercise = exercisesById[entry.exerciseId]
   const { state } = useStore()
   const exercisesIndex = useExercises()
@@ -600,7 +682,16 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch,
           </select>
         )}
       </div>
-      <div className="sx-entry-fields">
+      <button
+        type="button"
+        className="sx-entry-summary sx-num"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span>{entrySummary(entry)}</span>
+        <span className="sx-entry-summary-hint">{open ? 'Done' : 'Edit'}</span>
+      </button>
+      <div className={`sx-entry-fields${open ? '' : ' sx-hidden-screen'}`}>
         <NumberField label="Sets" value={entry.sets} min={1} max={20} onChange={(v) => patch({ sets: v })} />
         <NumberField
           label="Rep min"
@@ -624,6 +715,15 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch,
           step={15}
           onChange={(v) => patch({ restSec: v })}
         />
+        <button
+          type="button"
+          className="sx-entry-more-toggle"
+          aria-expanded={more}
+          onClick={() => setMore((m) => !m)}
+        >
+          {more ? 'Less' : 'More'}
+        </button>
+        <div className={`sx-entry-more${more ? '' : ' sx-hidden-screen'}`}>
         <NumberField
           label="RPE"
           value={entry.rpe}
@@ -662,6 +762,7 @@ function EntryEditor({ routine, day, slot, entry, entryIndex, pairTag, dispatch,
             onChange={(e) => patch({ note: e.target.value })}
           />
         </label>
+        </div>
         {/* Inputs can't wrap, so paper gets the note as plain text. */}
         {entry.note && <p className="sx-print-only sx-print-note">{entry.note}</p>}
       </div>

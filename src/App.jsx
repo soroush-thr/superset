@@ -1,3 +1,4 @@
+import NavIcon from './components/ui/NavIcon.jsx'
 import React, {
   createContext,
   useContext,
@@ -229,7 +230,7 @@ function AppShell() {
             aria-current={s.id === activeScreen ? 'page' : undefined}
             onClick={() => setActiveScreen(s.id)}
           >
-            <span aria-hidden="true">{s.icon}</span>
+            <NavIcon id={s.id} />
             {s.label}
           </button>
         ))}
@@ -282,7 +283,7 @@ function AppShell() {
               aria-current={s.id === activeScreen ? 'page' : undefined}
               onClick={() => setActiveScreen(s.id)}
             >
-              <span aria-hidden="true">{s.icon}</span>
+              <NavIcon id={s.id} />
               {s.label}
             </button>
           ))}

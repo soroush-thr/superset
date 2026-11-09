@@ -87,22 +87,25 @@ export default function Settings() {
       <h2>Settings</h2>
 
       <Section title="Equipment profiles">
-        <div className="sx-equipment-profiles">
-          {['home', 'gym'].map((profileName) => (
-            <div key={profileName} className="sx-equipment-profile">
-              <span className="sx-eyebrow">{label(profileName)}</span>
-              <div className="sx-checkbox-list">
-                {equipmentList.map((eq) => (
-                  <label key={eq} className="sx-checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={state.settings.equipmentProfiles[profileName].includes(eq)}
-                      onChange={() => toggleEquipment(profileName, eq)}
-                    />
-                    {label(eq)}
-                  </label>
-                ))}
-              </div>
+        <div className="sx-equipment-table" role="group" aria-label="Equipment by profile">
+          <div className="sx-equipment-head sx-eyebrow">
+            <span>Equipment</span>
+            <span>Home</span>
+            <span>Gym</span>
+          </div>
+          {equipmentList.map((eq) => (
+            <div key={eq} className="sx-equipment-row">
+              <span>{label(eq)}</span>
+              {['home', 'gym'].map((profileName) => (
+                <label key={profileName} className="sx-equipment-cell">
+                  <input
+                    type="checkbox"
+                    aria-label={`${label(eq)} at ${profileName}`}
+                    checked={state.settings.equipmentProfiles[profileName].includes(eq)}
+                    onChange={() => toggleEquipment(profileName, eq)}
+                  />
+                </label>
+              ))}
             </div>
           ))}
         </div>

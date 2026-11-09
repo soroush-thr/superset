@@ -5,6 +5,7 @@ import { useDebounced } from '../lib/hooks.js'
 import { equipmentOptionsFor, allEquipment } from '../lib/equipment.js'
 import { useStore, useExercises } from '../App.jsx'
 import Chip from './ui/Chip.jsx'
+import Drawer from './ui/Drawer.jsx'
 import Segmented from './ui/Segmented.jsx'
 import VirtualList from './ui/VirtualList.jsx'
 import ExerciseDetail from './ExerciseDetail.jsx'
@@ -52,21 +53,29 @@ export default function Library() {
   const [customOnly, setCustomOnly] = useState(false)
   const [favoritesOnly, setFavoritesOnly] = useState(false)
   const favoritesSet = useMemo(() => new Set(state.favorites), [state.favorites])
-  const [selectedEquipment, setSelectedEquipment] = useState(
-    () => new Set(equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList)),
-  )
+  // Only equipment the user explicitly picked. Empty means "whatever the
+  // profile allows" -- so chips don't all look switched on by default.
+  const [chosenEquipment, setChosenEquipment] = useState(() => new Set())
+  const [dayPickerFor, setDayPickerFor] = useState(null)
   const [openExercise, setOpenExercise] = useState(null)
   const [editorOpen, setEditorOpen] = useState(false)
-  // Filters start collapsed on phones, where five chip rows would push the
-  // results several screens down.
-  const [filtersOpen, setFiltersOpen] = useState(() => window.matchMedia('(min-width: 900px)').matches)
+  // Collapsed everywhere: the toggle shows a count, and the list comes first.
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
-  // Equipment chip set is pre-filtered by the active profile (section 9.1).
+  const profileEquipment = useMemo(
+    () => equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList),
+    [equipmentProfiles, activeProfile, equipmentList],
+  )
+  const profileEquipmentSet = useMemo(() => new Set(profileEquipment), [profileEquipment])
+
   // Switching profiles must not clear the other filter categories, so this
-  // effect only re-derives the equipment selection.
+  // only drops picks the new profile can't offer.
   useEffect(() => {
-    setSelectedEquipment(new Set(equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList)))
-  }, [activeProfile, equipmentProfiles, equipmentList])
+    setChosenEquipment((prev) => {
+      const next = new Set([...prev].filter((eq) => profileEquipmentSet.has(eq)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [profileEquipmentSet])
 
   const filtered = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase()
@@ -82,7 +91,8 @@ export default function Library() {
         const majors = exerciseMajors(ex)
         if (![...selectedMajors].some((m) => majors.has(m))) return false
       }
-      if (!selectedEquipment.has(ex.equipment)) return false
+      if (!profileEquipmentSet.has(ex.equipment)) return false
+      if (chosenEquipment.size > 0 && !chosenEquipment.has(ex.equipment)) return false
       if (selectedLevels.size > 0 && !selectedLevels.has(ex.level)) return false
       if (selectedMechanics.size > 0) {
         const m = ex.mechanic ?? 'unspecified'
@@ -101,7 +111,8 @@ export default function Library() {
     favoritesSet,
     debouncedSearch,
     selectedMajors,
-    selectedEquipment,
+    profileEquipmentSet,
+    chosenEquipment,
     selectedLevels,
     selectedMechanics,
     selectedForces,
@@ -109,6 +120,7 @@ export default function Library() {
 
   const activeFilterCount =
     selectedMajors.size +
+    chosenEquipment.size +
     selectedLevels.size +
     selectedMechanics.size +
     selectedForces.size +
@@ -158,7 +170,7 @@ export default function Library() {
         aria-expanded={filtersOpen}
         onClick={() => setFiltersOpen((v) => !v)}
       >
-        Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''} {filtersOpen ? '▴' : '▾'}
+        Filters{activeFilterCount > 0 ? ` \u00b7 ${activeFilterCount}` : ''} {filtersOpen ? '\u25b4' : '\u25be'}
       </button>
 
       {filtersOpen && (
@@ -177,12 +189,12 @@ export default function Library() {
           </FilterRow>
 
           <FilterRow title="Equipment">
-            {equipmentOptionsFor(equipmentProfiles, activeProfile, equipmentList).map((eq) => (
+            {profileEquipment.map((eq) => (
               <Chip
                 key={eq}
                 label={label(eq)}
-                active={selectedEquipment.has(eq)}
-                onClick={() => setSelectedEquipment((s) => toggle(s, eq))}
+                active={chosenEquipment.has(eq)}
+                onClick={() => setChosenEquipment((s) => toggle(s, eq))}
               />
             ))}
           </FilterRow>
@@ -241,7 +253,7 @@ export default function Library() {
               exercise={exercise}
               onOpen={() => setOpenExercise(exercise)}
               activeRoutine={activeRoutine}
-              onAddToDay={(dayId) => addToDay(exercise.id, dayId)}
+              onAddToDay={() => setDayPickerFor(exercise)}
               isFavorite={favoritesSet.has(exercise.id)}
               onToggleFavorite={() => dispatch({ type: 'TOGGLE_FAVORITE', exerciseId: exercise.id })}
             />
@@ -255,6 +267,26 @@ export default function Library() {
         onClose={() => setOpenExercise(null)}
         onSelectExercise={setOpenExercise}
       />
+      <Drawer
+        open={!!dayPickerFor}
+        onClose={() => setDayPickerFor(null)}
+        title={dayPickerFor ? `Add ${dayPickerFor.name} to...` : ''}
+      >
+        <div className="sx-day-picker">
+          {activeRoutine?.days.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => {
+                addToDay(dayPickerFor.id, d.id)
+                setDayPickerFor(null)
+              }}
+            >
+              {d.name}
+            </button>
+          ))}
+        </div>
+      </Drawer>
       <CustomExerciseEditor open={editorOpen} onClose={() => setEditorOpen(false)} />
     </div>
   )
@@ -285,7 +317,9 @@ function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay, isFavorite, 
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <div className="sx-exercise-thumb-placeholder" aria-hidden="true" />
+            <div className="sx-exercise-thumb-placeholder" aria-hidden="true">
+              {exercise.name.charAt(0).toUpperCase()}
+            </div>
           )}
         </div>
         <div className="sx-exercise-row-info">
@@ -309,25 +343,16 @@ function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay, isFavorite, 
         {isFavorite ? '★' : '☆'}
       </button>
 
-      <select
-        className="sx-input sx-add-to-day"
-        value=""
+      <button
+        type="button"
+        className="sx-add-to-day"
+        aria-label={`Add ${exercise.name} to a day`}
         disabled={!activeRoutine || activeRoutine.days.length === 0}
-        title={
-          activeRoutine ? undefined : 'Create a routine in the Routine tab first'
-        }
-        onChange={(e) => {
-          if (e.target.value) onAddToDay(e.target.value)
-          e.target.value = ''
-        }}
+        title={activeRoutine ? 'Add to a day' : 'Create a routine in the Routine tab first'}
+        onClick={onAddToDay}
       >
-        <option value="">Add to...</option>
-        {activeRoutine?.days.map((d) => (
-          <option key={d.id} value={d.id}>
-            {d.name}
-          </option>
-        ))}
-      </select>
+        +
+      </button>
     </div>
   )
 }

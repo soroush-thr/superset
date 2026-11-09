@@ -97,9 +97,12 @@ export default function Coverage() {
           also compare against a plan.
         </p>
         <div className="sx-coverage-controls">
-          <Segmented value={windowDays} onChange={setWindowDays} options={WINDOW_OPTIONS} />
+          <LabeledControl label="Window">
+            <Segmented value={windowDays} onChange={setWindowDays} options={WINDOW_OPTIONS} />
+          </LabeledControl>
           <CreditModeToggle state={state} dispatch={dispatch} />
         </div>
+        <CoverageLegend viewMode="actual" />
         <Ledger
           sortMode="major"
           plannedStatuses={plannedStatuses}
@@ -124,23 +127,33 @@ export default function Coverage() {
       <h2>{routine.name}</h2>
 
       <div className="sx-coverage-controls">
-        <Segmented value={sortMode} onChange={setSortMode} options={SORT_OPTIONS} />
+        <LabeledControl label="Sort by">
+          <Segmented value={sortMode} onChange={setSortMode} options={SORT_OPTIONS} />
+        </LabeledControl>
         <CreditModeToggle state={state} dispatch={dispatch} />
       </div>
 
       <div className="sx-coverage-controls">
-        <Segmented value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+        <LabeledControl label="Source">
+          <Segmented value={viewMode} onChange={setViewMode} options={VIEW_OPTIONS} />
+        </LabeledControl>
         {viewMode !== 'planned' && (
-          <Segmented value={windowDays} onChange={setWindowDays} options={WINDOW_OPTIONS} />
+          <LabeledControl label="Window">
+            <Segmented value={windowDays} onChange={setWindowDays} options={WINDOW_OPTIONS} />
+          </LabeledControl>
         )}
         {viewMode !== 'actual' && weeks.length > 1 && (
-          <Segmented
-            value={clampedWeekIndex}
-            onChange={setWeekIndex}
-            options={weeks.map((_, i) => ({ value: i, label: `Week ${i + 1}` }))}
-          />
+          <LabeledControl label="Week">
+            <Segmented
+              value={clampedWeekIndex}
+              onChange={setWeekIndex}
+              options={weeks.map((_, i) => ({ value: i, label: `Week ${i + 1}` }))}
+            />
+          </LabeledControl>
         )}
       </div>
+
+      <CoverageLegend viewMode={viewMode} />
 
       <Ledger
         sortMode={sortMode}
@@ -161,9 +174,50 @@ export default function Coverage() {
   )
 }
 
+function LabeledControl({ label, children }) {
+  return (
+    <div className="sx-labeled-control">
+      <span className="sx-eyebrow">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+/** Key for the ledger: what the dot/bar colours mean and what the tick
+ *  marks on each bar are. The marker only exists in "Both". */
+function CoverageLegend({ viewMode }) {
+  return (
+    <ul className="sx-legend" aria-label="Legend">
+      <li>
+        <span className="sx-status-dot" style={{ background: 'var(--under)' }} aria-hidden="true" />
+        Below target
+      </li>
+      <li>
+        <span className="sx-status-dot" style={{ background: 'var(--in)' }} aria-hidden="true" />
+        In range
+      </li>
+      <li>
+        <span className="sx-status-dot" style={{ background: 'var(--over)' }} aria-hidden="true" />
+        Above ceiling
+      </li>
+      <li>
+        <span className="sx-legend-bracket" aria-hidden="true" />
+        Target range
+      </li>
+      {viewMode === 'both' && (
+        <li>
+          <span className="sx-legend-marker" aria-hidden="true" />
+          Actual (bar = planned)
+        </li>
+      )}
+    </ul>
+  )
+}
+
 function CreditModeToggle({ state, dispatch }) {
   return (
-    <div className="sx-credit-mode">
+    <div className="sx-credit-mode sx-labeled-control">
+      <span className="sx-eyebrow">Credit</span>
       <Segmented
         value={state.settings.creditMode}
         onChange={(v) => dispatch({ type: 'UPDATE_SETTINGS', patch: { creditMode: v } })}
