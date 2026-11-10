@@ -8,33 +8,33 @@
 :root {
   color-scheme: dark;
 
-  --bg: #101317;
-  --surface: #171c22;
-  --surface-2: #1f262e;
-  --line: #2c353f;
-  --line-soft: #222a33;
-  --text: #e6ebf0;
-  --text-dim: #9eabb8;
-  --text-faint: #8593a1; /* >= 4.5:1 on --bg, --surface and --surface-2 */
-  --accent: #3fbfb4; /* controls only, never data */
-  --accent-dim: #1e4f4c;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #141414;
+  --line: #262626;
+  --line-soft: #1a1a1a;
+  --text: #ededed;
+  --text-dim: #a1a1aa;
+  --text-faint: #71717a; /* >= 4.5:1 on --bg, --surface and --surface-2 */
+  --accent: #00e5ff; /* controls only, never data */
+  --accent-dim: #00333d;
   --under: #4e7fa8; /* status: below target */
   --in: #4fa77e; /* status: in range */
   --over: #d8763c; /* status: above ceiling */
   --series-1: #c9a24b; /* chart data series 1, e.g. est. 1RM */
   --series-2: #8a7fd8; /* chart data series 2, e.g. top set weight / actual marker */
-  --radius: 3px;
+  --radius: 12px;
 
   /* 8.3 type scale, px */
-  --fs-1: 11px;
-  --fs-2: 13px;
-  --fs-3: 15px;
-  --fs-4: 19px;
-  --fs-5: 26px;
-  --fs-6: 34px;
+  --fs-1: 12px;
+  --fs-2: 14px;
+  --fs-3: 16px;
+  --fs-4: 20px;
+  --fs-5: 28px;
+  --fs-6: 36px;
 
-  --font-display: 'Space Grotesk', 'Grotesk', system-ui, sans-serif;
-  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
   --rail-width: 220px;
@@ -125,17 +125,21 @@ textarea:focus-visible,
 
 button {
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
   color: var(--text);
   cursor: pointer;
   min-height: 40px;
   min-width: 40px;
   padding: 0 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
 }
 
 button:hover {
-  border-color: var(--text-faint);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 button.sx-primary {
@@ -158,7 +162,7 @@ button.sx-primary {
 .sx-content {
   flex: 1;
   min-width: 0;
-  padding: 24px;
+  padding: 32px 48px;
 }
 
 .sx-layout {
@@ -358,9 +362,16 @@ button.sx-primary {
   padding: 0 12px;
   border-radius: var(--radius);
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-dim);
   font-size: var(--fs-2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.sx-chip:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 .sx-chip.sx-active {
@@ -868,10 +879,16 @@ button.sx-primary {
 
 .sx-day-card {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sx-day-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .sx-day-card-header {
@@ -1904,10 +1921,11 @@ button.sx-thumb {
   position: sticky;
   top: 0;
   z-index: 5;
-  margin-bottom: 12px;
-  padding: 8px 0 10px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
+  margin-bottom: 16px;
+  padding: 12px 0 14px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sx-session-bar-top {
@@ -2396,8 +2414,8 @@ button.sx-thumb {
    border (and the current card's 1px ring) can't show beside it while it
    scrolls underneath. */
 .sx-session-bar {
-  margin: 0 -24px 12px;
-  padding: 8px 24px 8px;
+  margin: 0 -48px 16px;
+  padding: 12px 48px;
 }
 
 /* One row that never wraps: the name and meta shrink, Finish stays put. */
@@ -2550,10 +2568,12 @@ button.sx-thumb {
   flex-direction: column;
   gap: 2px;
   padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: rgba(10, 10, 10, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .sx-menu > button,
