@@ -582,6 +582,18 @@ Sticky bars show their hairline only once the page has scrolled
 - Train: weight and reps are the hero numbers; logging a set pops a solid lime
   tick (and a short haptic where supported); the rest timer is a draining ring.
 - Charts: gradient area under series 1, line draws in on load.
+- Session summary (`train/SessionSummary.jsx`): shown after Finish. Mono hero
+  numbers that count up, two `<BodyMap mini>` figures lit with the session's
+  muscles (peak scaled to the "in range" stop), and personal records in
+  `--series-1`, never the accent. Records are derived in `lib/sessionStats.js`,
+  not stored. `lib/summaryImage.js` draws the same card as an SVG and
+  rasterises it to a PNG for sharing; its colours mirror the tokens by hand.
+- Mini muscle maps (`ui/MuscleFigure.jsx`): memoised, decorative `<BodyMap mini>`
+  figures that scale themselves (peak region at 0.75 of the ramp). `views="auto"`
+  draws only the hotter side (front on a tie), `"both"` front and back. Used in
+  the `ExerciseThumb` no-image fallback (monogram only without `sub` data),
+  Library rows (hidden below 560px of row width), routine day-card headers
+  (hidden in print) and session history rows. Sized by `--sx-figure-h`.
 - Empty states: a dashed well with one line that names the fix. `.sx-skeleton`
   is available for placeholders.
 

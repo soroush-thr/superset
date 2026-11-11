@@ -40,7 +40,7 @@ function useNow(active) {
  * whole session is visible at once. The next exercise to do is highlighted.
  * Feeds the shell's sticky body map with live logged volume.
  */
-export default function ActiveSession() {
+export default function ActiveSession({ onFinished }) {
   const { state, dispatch } = useStore()
   const { byId: exercisesById, list: exercisesList } = useExercises()
   const unit = state.settings.unit ?? 'kg'
@@ -88,6 +88,7 @@ export default function ActiveSession() {
       <SessionBar
         session={session}
         dispatch={dispatch}
+        onFinished={doneSets > 0 ? onFinished : undefined}
         elapsedMs={now - new Date(session.startedAt).getTime()}
         doneSets={doneSets}
         totalSets={totalSets}
@@ -171,7 +172,7 @@ function StartSession({ state, dispatch }) {
   )
 }
 
-function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal, restPref }) {
+function SessionBar({ session, dispatch, onFinished, elapsedMs, doneSets, totalSets, kcal, restPref }) {
   const pct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0
   return (
     <div className="sx-session-bar">
@@ -187,7 +188,12 @@ function SessionBar({ session, dispatch, elapsedMs, doneSets, totalSets, kcal, r
         <button
           type="button"
           className="sx-primary"
-          onClick={() => dispatch({ type: 'END_SESSION', sessionId: session.id })}
+          onClick={() => {
+            dispatch({ type: 'END_SESSION', sessionId: session.id })
+            // Hand the id up so Train can show the summary card; a session
+            // with nothing logged just closes.
+            onFinished?.(session.id)
+          }}
         >
           Finish
         </button>

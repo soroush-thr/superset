@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import ConfirmButton from './ui/ConfirmButton.jsx'
 import ExerciseThumb from './ui/ExerciseThumb.jsx'
 import { useStore, useBodyMapFeed, useExercises } from '../App.jsx'
-import { weeklyVolume, substitutesFor } from '../lib/coverage.js'
+import MuscleFigure from './ui/MuscleFigure.jsx'
+import { weeklyVolume, volumeForEntries, substitutesFor } from '../lib/coverage.js'
 import { useDebounced } from '../lib/hooks.js'
 import { equipmentOptionsFor, allEquipment } from '../lib/equipment.js'
 import { TEMPLATES } from '../lib/templates.js'
@@ -416,6 +417,13 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
     0,
   )
   const letters = pairLetters(day.slots)
+  const { state } = useStore()
+  const creditMode = state.settings.creditMode
+  // Only recomputed when this day's slots change, not on every day-name key.
+  const dayVolume = useMemo(
+    () => volumeForEntries(day.slots.flatMap((slot) => slot.entries), exercisesById, creditMode),
+    [day.slots, exercisesById, creditMode],
+  )
 
   return (
     <div className={`sx-day-card${day.slots.length === 0 ? ' sx-day-card--empty' : ''}`}>
@@ -432,6 +440,14 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
             })
           }
         />
+        {day.slots.length > 0 && (
+          <MuscleFigure
+            className="sx-day-card-figure"
+            values={dayVolume}
+            views="both"
+            label={`${day.name || 'Day'}: muscles worked`}
+          />
+        )}
         <span className="sx-eyebrow sx-num">{totalSets} sets</span>
         <button
           type="button"

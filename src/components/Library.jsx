@@ -6,6 +6,7 @@ import { equipmentOptionsFor, allEquipment } from '../lib/equipment.js'
 import { useStore, useExercises } from '../App.jsx'
 import Chip from './ui/Chip.jsx'
 import Drawer from './ui/Drawer.jsx'
+import MuscleFigure from './ui/MuscleFigure.jsx'
 import Segmented from './ui/Segmented.jsx'
 import VirtualList from './ui/VirtualList.jsx'
 import ExerciseDetail from './ExerciseDetail.jsx'
@@ -344,6 +345,17 @@ function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay, isFavorite, 
           </span>
         </div>
       </button>
+
+      {/* Decorative; CSS hides it when the row is narrow and it never changes
+          the row's fixed height (VirtualList positions rows by ROW_HEIGHT). */}
+      {exercise.sub && (
+        <MuscleFigure
+          className="sx-exercise-row-figure"
+          values={exercise.sub}
+          views="auto"
+          label={`${exercise.name}: muscles worked`}
+        />
+      )}
 
       <button
         type="button"
