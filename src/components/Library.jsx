@@ -133,11 +133,24 @@ export default function Library() {
     dispatch({ type: 'ADD_SLOT', routineId: activeRoutine.id, dayId, exerciseId })
   }
 
+  // The open filter panel lives in the sticky toolbar; fold it away once the
+  // user scrolls on into the list so it never hogs the screen.
+  useEffect(() => {
+    if (!filtersOpen) return undefined
+    const start = window.scrollY
+    const onScroll = () => {
+      if (Math.abs(window.scrollY - start) > 160) setFiltersOpen(false)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [filtersOpen])
+
   return (
     <div>
       <span className="sx-eyebrow">Library</span>
       <h2>876 exercises</h2>
 
+      <div className="sx-library-toolbar">
       <div className="sx-library-controls">
         <input
           className="sx-input sx-search"
@@ -173,7 +186,7 @@ export default function Library() {
       </button>
 
       {filtersOpen && (
-        <>
+        <div className="sx-filter-panel">
           <FilterRow title="Muscle group">
             {MAJORS.map((m) => (
               <Chip
@@ -230,13 +243,14 @@ export default function Library() {
               />
             ))}
           </FilterRow>
-        </>
+        </div>
       )}
 
       <p className="sx-eyebrow sx-result-count">
         <span className="sx-num">{filtered.length}</span> of{' '}
         <span className="sx-num">{exercises.length}</span>
       </p>
+      </div>
 
       {filtered.length === 0 ? (
         <p className="sx-empty-state">

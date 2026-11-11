@@ -800,6 +800,34 @@ button.sx-danger:hover {
 
 /* --------------------------------------------------------------- 9.1 library */
 
+/* Search, profile and filters stay pinned while the page scrolls the list. */
+.sx-library-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin: 0 -16px;
+  padding: 4px 16px 0;
+  background: rgba(9, 9, 10, 0.86);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+
+:root[data-scrolled] .sx-library-toolbar {
+  border-bottom-color: var(--hairline);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+
+/* Open filters never push the list off-screen: capped, and only scroll
+   if a short viewport truly can't fit them. */
+.sx-filter-panel {
+  max-height: 45vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
 .sx-library-controls {
   display: flex;
   gap: 12px;
@@ -841,7 +869,7 @@ button.sx-danger:hover {
 }
 
 .sx-result-count {
-  margin: 14px 0 8px;
+  margin: 10px 0 8px;
 }
 
 .sx-empty-state {
