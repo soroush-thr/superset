@@ -418,7 +418,7 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
   const letters = pairLetters(day.slots)
 
   return (
-    <div className="sx-day-card">
+    <div className={`sx-day-card${day.slots.length === 0 ? ' sx-day-card--empty' : ''}`}>
       <div className="sx-day-card-header">
         <input
           className="sx-input sx-day-name"
@@ -461,6 +461,9 @@ function DayCard({ routine, day, index, dayCount, dispatch, exercisesById }) {
           Delete day
         </ConfirmButton>
       </div>
+
+      {/* No on-screen editor for day notes yet; they only appear on paper. */}
+      {day.note && <p className="sx-print-only sx-print-day-note">{day.note}</p>}
 
       <div
         className="sx-day-slots"

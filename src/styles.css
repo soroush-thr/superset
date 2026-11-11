@@ -1525,21 +1525,39 @@ button.sx-primary {
     margin: 0 24px 8px 0;
   }
 
-  /* One day per page; the first day shares page one with the header.
-     Within a day, break between exercises, never through one. */
+  /* Days flow one after another instead of one per page, so a short or
+     rest day doesn't leave most of a sheet blank. Pages break between
+     exercises, never through one, and a day's header always stays with
+     its first exercise. */
   .sx-day-card {
     padding: 8px 10px 0;
-    margin-bottom: 0;
+    margin-bottom: 10px;
     background: #fff;
     border-color: #999;
   }
 
-  .sx-day-card + .sx-day-card {
-    break-before: page;
+  .sx-day-card-header {
+    margin-bottom: 6px;
+    break-after: avoid;
   }
 
-  .sx-day-card-header {
-    margin-bottom: 8px;
+  .sx-print-day-note {
+    margin: 0 0 6px;
+    font-size: var(--fs-2);
+    line-height: 1.35;
+    break-after: avoid;
+  }
+
+  /* A rest/class day (no exercises) prints as one compact line: its name
+     and note, without the "add exercises" hint or a "0 sets" count. */
+  .sx-day-card--empty {
+    padding-bottom: 2px;
+    break-inside: avoid;
+  }
+
+  .sx-day-card--empty .sx-day-slots,
+  .sx-day-card--empty .sx-day-card-header .sx-eyebrow {
+    display: none !important;
   }
 
   .sx-slot {
@@ -1612,8 +1630,8 @@ button.sx-primary {
 
   .sx-entry-header .sx-thumb img {
     position: static;
-    width: 120px;
-    height: 80px;
+    width: 105px;
+    height: 70px;
     object-fit: contain;
     border: 1px solid #ccc;
     border-radius: var(--radius);
