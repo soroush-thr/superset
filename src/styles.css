@@ -3505,3 +3505,199 @@ li.sx-empty-state {
     letter-spacing: -0.01em;
   }
 }
+
+/* ------------------------------------------------- session summary card
+   Shown right after Finish. Mono hero numbers, the body lit with what was
+   trained, personal records in the series-1 data colour (never the accent:
+   that is for controls). */
+.sx-bodymap--mini {
+  margin: 0;
+  max-width: none;
+  pointer-events: none;
+}
+
+.sx-summary {
+  max-width: 720px;
+  /* Sized by its own column, not the viewport: on desktop the sticky body
+     map takes a third of the width, so viewport breakpoints would lie. */
+  container-type: inline-size;
+}
+
+.sx-summary-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-6);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(255, 255, 255, 0.045), transparent 60%),
+    var(--surface);
+  box-shadow: var(--elev-2);
+  animation: sx-page-in var(--dur-3) var(--ease-out) backwards;
+}
+
+.sx-summary-head h2 {
+  margin-top: var(--space-2);
+  font-size: var(--fs-5);
+}
+
+.sx-summary-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-5);
+  margin: var(--space-6) 0;
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.sx-summary-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.sx-summary-stats dd {
+  margin: 0;
+  font-size: clamp(26px, 9.5cqi, var(--fs-7));
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.sx-summary-body {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.sx-summary-maps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.sx-summary-maps .sx-bodymap-region {
+  animation: sx-fade 600ms var(--ease-out) 250ms backwards;
+}
+
+.sx-summary-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.sx-summary-muscles {
+  margin: var(--space-1) 0;
+  font-size: var(--fs-4);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.sx-summary-side .sx-helper-text {
+  margin: 0;
+}
+
+.sx-summary-record-title {
+  color: var(--series-1);
+}
+
+.sx-summary-records {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sx-summary-records li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-items: center;
+  animation: sx-page-in var(--dur-3) var(--ease-out) backwards;
+}
+
+.sx-summary-badge {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--series-1);
+  color: var(--series-1);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.sx-summary-record-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.sx-summary-record-value {
+  font-size: var(--fs-2);
+  color: var(--text-dim);
+}
+
+.sx-summary-record-value em {
+  font-style: normal;
+  color: var(--series-1);
+}
+
+.sx-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.sx-summary-actions .sx-helper-text {
+  margin: 0;
+}
+
+@container (max-width: 520px) {
+  .sx-summary-card {
+    padding: var(--space-5);
+  }
+
+  .sx-summary-body {
+    grid-template-columns: 1fr;
+  }
+
+  .sx-summary-maps {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-summary-card,
+  .sx-summary-records li,
+  .sx-summary-maps .sx-bodymap-region {
+    animation: none !important;
+  }
+}
+
+@media print {
+  .sx-summary-card {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .sx-summary-actions {
+    display: none;
+  }
+}

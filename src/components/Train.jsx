@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useStore } from '../App.jsx'
 import Segmented from './ui/Segmented.jsx'
 import ActiveSession from './train/ActiveSession.jsx'
+import SessionSummary from './train/SessionSummary.jsx'
 import SessionHistory from './train/SessionHistory.jsx'
 import Progress from './train/Progress.jsx'
 import Generate from './train/Generate.jsx'
@@ -19,6 +20,11 @@ const TABS = [
 export default function Train() {
   const { state } = useStore()
   const [tab, setTab] = useState('active')
+  // The session that was just finished, shown as a summary card in place of
+  // "No session in progress" until dismissed or a new session starts.
+  const [summaryId, setSummaryId] = useState(null)
+  const summarySession =
+    summaryId && !state.activeSessionId ? state.sessions.find((s) => s.id === summaryId && s.endedAt) : null
 
   return (
     <div>
@@ -32,7 +38,12 @@ export default function Train() {
         )}
       </div>
 
-      {tab === 'active' && <ActiveSession />}
+      {tab === 'active' &&
+        (summarySession ? (
+          <SessionSummary session={summarySession} onDone={() => setSummaryId(null)} />
+        ) : (
+          <ActiveSession onFinished={setSummaryId} />
+        ))}
       {tab === 'history' && <SessionHistory />}
       {tab === 'progress' && <Progress />}
       {tab === 'generate' && <Generate onStarted={() => setTab('active')} />}

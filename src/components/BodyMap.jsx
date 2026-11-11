@@ -21,7 +21,7 @@ const SUBGROUP_TO_REGION = Object.fromEntries(
  * keyed by sub-group id (e.g. { pec_mid: 12.4, lat: 8.1 }), matching the
  * shape of weeklyVolume()'s output and of a single exercise's `sub` vector.
  */
-function aggregateByRegion(values) {
+export function aggregateByRegion(values) {
   const totals = {}
   for (const [subgroupId, value] of Object.entries(values)) {
     const region = SUBGROUP_TO_REGION[subgroupId]
@@ -53,8 +53,12 @@ function defaultScaleMax(values) {
  * contour lines and a soft light gradient that give the figure volume.
  * See BUILD-PLAN.md section 7. Every region is a real DOM node, so hover,
  * focus, and click all work without a canvas or extra library.
+ *
+ * `mini` renders the same figure as a small, non-interactive picture (no
+ * hover, no per-region titles) for cards and list rows; pass `label` to
+ * describe what it shows.
  */
-export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegionClick }) {
+export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegionClick, mini = false, label }) {
   const regions = view === 'back' ? BACK_REGIONS : FRONT_REGIONS
   const totals = useMemo(() => aggregateByRegion(values), [values])
   const resolvedScaleMax = scaleMax ?? defaultScaleMax(values)
@@ -62,7 +66,12 @@ export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegio
   const shadeId = `sx-shade-${useId().replace(/:/g, '')}`
 
   return (
-    <svg className="sx-bodymap" viewBox={VIEW_BOX} role="img" aria-label={`Body map, ${view} view`}>
+    <svg
+      className={`sx-bodymap${mini ? ' sx-bodymap--mini' : ''}`}
+      viewBox={VIEW_BOX}
+      role="img"
+      aria-label={label ?? `Body map, ${view} view`}
+    >
       <defs>
         <linearGradient id={shadeId} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0" stopColor="#000" stopOpacity="0.16" />
@@ -75,8 +84,8 @@ export default function BodyMap({ view = 'front', values = {}, scaleMax, onRegio
       {regions.map((region) => {
         const value = totals[region.id] || 0
         const fill = heatColor(value, resolvedScaleMax)
-        const label = REGION_LABELS[region.id] ?? region.id
-        const handleClick = onRegionClick ? () => onRegionClick(region.id) : undefined
+        const label = mini ? null : REGION_LABELS[region.id] ?? region.id
+        const handleClick = onRegionClick && !mini ? () => onRegionClick(region.id) : undefined
 
         return (
           <React.Fragment key={region.id}>
@@ -121,10 +130,12 @@ function RegionPath({ id, d, fill, label, onClick, mirrored }) {
           : undefined
       }
     >
-      <title>
-        {label}
-        {mirrored ? ' (other side)' : ''}
-      </title>
+      {label && (
+        <title>
+          {label}
+          {mirrored ? ' (other side)' : ''}
+        </title>
+      )}
     </path>
   )
 }
