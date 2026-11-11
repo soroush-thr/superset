@@ -19,6 +19,7 @@ import Settings from './components/Settings.jsx'
 import BodyMap from './components/BodyMap.jsx'
 import Drawer from './components/ui/Drawer.jsx'
 import Onboarding from './components/Onboarding.jsx'
+import { useScrolledFlag } from './lib/hooks.js'
 
 // State and dispatch are split into two contexts so a component that only
 // needs to dispatch (write-heavy session logging) doesn't re-render on every
@@ -203,6 +204,7 @@ function AppShell() {
   const { Component } = screen
 
   useUndoRedoKeybinding()
+  useScrolledFlag()
 
   // Screens share one window scroll (no router), so a new screen would
   // otherwise open wherever the last one was scrolled to.
@@ -221,7 +223,10 @@ function AppShell() {
     <div className="sx-app">
       <ShareImportPrompt onImported={() => setActiveScreen('routine')} />
       <nav className="sx-rail" aria-label="Screens">
-        <div className="sx-rail-brand">Superset</div>
+        <div className="sx-rail-brand">
+          <span className="sx-rail-mark" aria-hidden="true" />
+          Superset
+        </div>
         {SCREENS.map((s) => (
           <button
             key={s.id}
@@ -250,7 +255,7 @@ function AppShell() {
             </button>
           )}
           <main className="sx-main">
-            <div className="sx-content">
+            <div className="sx-content" key={activeScreen}>
               <BodyMapFeedContext.Provider value={setBodyMapFeed}>
                 <Component />
               </BodyMapFeedContext.Provider>

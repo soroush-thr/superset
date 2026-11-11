@@ -13,7 +13,7 @@
 // kept referencing a hashed JS/CSS bundle that a later deploy deleted --
 // white screen. Below, GEN:CACHE_VERSION is the literal token the
 // generator replaces.
-const CACHE_VERSION = '3b6cf37' // written by tools/gen-sw-version.js, do not hand-edit
+const CACHE_VERSION = '5ee305f' // written by tools/gen-sw-version.js, do not hand-edit
 const SHELL_CACHE = `superset-shell-v${CACHE_VERSION}`
 const IMG_CACHE = 'superset-img-v1'
 const IMG_CACHE_MAX_ENTRIES = 300

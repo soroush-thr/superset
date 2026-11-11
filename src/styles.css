@@ -414,11 +414,44 @@ button.sx-danger:hover {
 }
 
 .sx-rail-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-display);
   font-weight: 600;
   font-size: var(--fs-4);
   letter-spacing: -0.03em;
   padding: 4px 12px 24px;
+}
+
+/* Two stacked bars: a "superset" of two lifts, in the accent. */
+.sx-rail-mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sx-rail-mark::before,
+.sx-rail-mark::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  height: 7px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.sx-rail-mark::before {
+  top: 0;
+  width: 18px;
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.sx-rail-mark::after {
+  bottom: 0;
+  width: 11px;
+  opacity: 0.55;
 }
 
 /* Mobile: bottom tab bar, single column. Body map (when present) collapses
@@ -522,6 +555,23 @@ button.sx-danger:hover {
   border: 1px solid var(--hairline);
   border-radius: calc(var(--radius) + 4px);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  position: relative;
+}
+
+.sx-segmented-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--radius);
+  background: var(--surface-3);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--elev-2);
+  pointer-events: none;
+}
+
+.sx-segmented-thumb--ready {
+  transition: transform var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out),
+    height var(--dur-3) var(--ease-out);
 }
 
 .sx-segmented-item {
@@ -532,6 +582,8 @@ button.sx-danger:hover {
   background: transparent;
   color: var(--text-dim);
   box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
 .sx-segmented-item:hover {
@@ -541,11 +593,12 @@ button.sx-danger:hover {
   box-shadow: none;
 }
 
-.sx-segmented-item.sx-active {
-  background: var(--surface-3);
-  border-color: var(--hairline);
+.sx-segmented-item.sx-active,
+.sx-segmented-item.sx-active:hover {
+  background: transparent;
+  border-color: transparent;
   color: var(--text);
-  box-shadow: var(--elev-2);
+  box-shadow: none;
 }
 
 @media (max-width: 599px) {
@@ -3012,4 +3065,43 @@ button.sx-thumb {
   align-items: center;
   min-height: 36px;
   cursor: pointer;
+}
+
+/* ------------------------------------------------ phase 2: app shell motion */
+
+@keyframes sx-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.sx-content {
+  animation: sx-page-in var(--dur-3) var(--ease-out);
+}
+
+/* Sticky bars show their hairline only once content scrolls beneath them. */
+.sx-session-bar {
+  border-bottom-color: transparent;
+  transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out);
+}
+
+:root[data-scrolled] .sx-session-bar {
+  border-bottom-color: var(--hairline);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+
+@media (max-width: 899px) {
+  .sx-side-toggle {
+    background: rgba(16, 16, 18, 0.78);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom-color: var(--hairline);
+    box-shadow: none;
+  }
+
+  .sx-side-toggle:hover {
+    box-shadow: none;
+    transform: none;
+  }
 }

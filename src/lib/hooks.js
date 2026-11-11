@@ -52,3 +52,21 @@ export function useWakeLock(active) {
     }
   }, [active])
 }
+
+/** Mirror "the page has scrolled" onto <html data-scrolled> so sticky bars can
+ *  reveal their hairline only once content is actually passing beneath them. */
+export function useScrolledFlag(threshold = 4) {
+  useEffect(() => {
+    const root = document.documentElement
+    const update = () => {
+      if (window.scrollY > threshold) root.setAttribute('data-scrolled', '')
+      else root.removeAttribute('data-scrolled')
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', update)
+      root.removeAttribute('data-scrolled')
+    }
+  }, [threshold])
+}
