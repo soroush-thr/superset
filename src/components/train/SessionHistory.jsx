@@ -1,5 +1,8 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import ConfirmButton from '../ui/ConfirmButton.jsx'
+import MuscleFigure from '../ui/MuscleFigure.jsx'
+import { volumeForEntries } from '../../lib/coverage.js'
+import { sessionSetCounts } from '../../lib/sessions.js'
 import { useStore, useExercises } from '../../App.jsx'
 import { formatWeight } from '../../lib/units.js'
 import { DEFAULT_BODY_KG, latestBodyKg, sessionKcal } from '../../lib/calories.js'
@@ -51,6 +54,7 @@ export default function SessionHistory() {
                 {formatDuration(session.startedAt, session.endedAt)}
               </span>
             </div>
+            <SessionFigure session={session} exercisesById={exercisesById} creditMode={state.settings.creditMode} />
             <span className="sx-num">
               {totalSets} sets{kcal != null ? ` · ~${kcal} kcal` : ''}
             </span>
@@ -69,6 +73,24 @@ export default function SessionHistory() {
 
       <SessionDetail session={openSession} open={!!openSession} onClose={() => setOpenSessionId(null)} />
     </div>
+  )
+}
+
+/** The muscles one finished session trained, from its done sets only
+ *  (sessionSetCounts leaves cooldown stretches out). Its own component so the
+ *  volume can be memoised per row rather than recomputed on every render. */
+function SessionFigure({ session, exercisesById, creditMode }) {
+  const muscles = useMemo(
+    () => volumeForEntries(sessionSetCounts([session]), exercisesById, creditMode),
+    [session, exercisesById, creditMode],
+  )
+  return (
+    <MuscleFigure
+      className="sx-session-history-figure"
+      values={muscles}
+      views="both"
+      label={`${session.dayName || 'Session'}: muscles trained`}
+    />
   )
 }
 

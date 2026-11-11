@@ -588,6 +588,12 @@ Sticky bars show their hairline only once the page has scrolled
   `--series-1`, never the accent. Records are derived in `lib/sessionStats.js`,
   not stored. `lib/summaryImage.js` draws the same card as an SVG and
   rasterises it to a PNG for sharing; its colours mirror the tokens by hand.
+- Mini muscle maps (`ui/MuscleFigure.jsx`): memoised, decorative `<BodyMap mini>`
+  figures that scale themselves (peak region at 0.75 of the ramp). `views="auto"`
+  draws only the hotter side (front on a tie), `"both"` front and back. Used in
+  the `ExerciseThumb` no-image fallback (monogram only without `sub` data),
+  Library rows (hidden below 560px of row width), routine day-card headers
+  (hidden in print) and session history rows. Sized by `--sx-figure-h`.
 - Empty states: a dashed well with one line that names the fix. `.sx-skeleton`
   is available for placeholders.
 

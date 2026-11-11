@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { IMG_BASE } from '../../lib/constants.js'
+import MuscleFigure from './MuscleFigure.jsx'
 
 /**
  * An exercise's picture. The dataset has two frames per exercise (start and
@@ -13,11 +14,21 @@ export default function ExerciseThumb({ exercise, size = 'md', onClick }) {
   const frames = (exercise?.images ?? []).slice(0, 2)
   const label = exercise ? `${exercise.name}: show instructions` : undefined
 
+  // With no picture, show which muscles the exercise works (more useful than
+  // a letter); the monogram stays only for exercises with no muscle data.
+  const hasMuscles = !!exercise?.sub && Object.keys(exercise.sub).length > 0
+
   const body =
     frames.length === 0 || failed ? (
-      <span className="sx-thumb-blank" aria-hidden="true">
-        {(exercise?.name ?? '?').charAt(0).toUpperCase()}
-      </span>
+      hasMuscles ? (
+        <span className="sx-thumb-blank sx-thumb-blank--figure">
+          <MuscleFigure values={exercise.sub} views="auto" label={`${exercise.name}: muscles worked`} />
+        </span>
+      ) : (
+        <span className="sx-thumb-blank" aria-hidden="true">
+          {(exercise?.name ?? '?').charAt(0).toUpperCase()}
+        </span>
+      )
     ) : (
       frames.map((src, i) => (
         <img

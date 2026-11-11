@@ -3701,3 +3701,85 @@ li.sx-empty-state {
     display: none;
   }
 }
+
+/* ------------------------------------------------------- mini muscle maps
+   `ui/MuscleFigure.jsx`: one or two mini body maps sized by height (the
+   viewBox is 260 x 620, so width follows). Decorative and inert: the text
+   beside each one already names the muscles. Colour comes only from the heat
+   ramp; no accent on data. No animation. */
+.sx-figure {
+  --sx-figure-h: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  gap: var(--space-1);
+  height: var(--sx-figure-h);
+  pointer-events: none;
+}
+
+.sx-figure .sx-bodymap {
+  flex: none;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 260 / 620;
+}
+
+/* Thumbnail fallback: the figure is centred with a little air in every size. */
+.sx-thumb-blank--figure {
+  box-sizing: border-box;
+  padding: var(--space-1);
+}
+
+.sx-thumb-blank--figure .sx-figure {
+  height: 100%;
+}
+
+/* Library row: sits between the text and the buttons inside the fixed 68px
+   row, so it can never change the row height. Hidden once the row is narrow;
+   the row is its own container because the page column width varies with the
+   desktop side map. */
+.sx-exercise-row {
+  container-type: inline-size;
+}
+
+.sx-exercise-row-figure {
+  --sx-figure-h: 52px;
+  margin: 0 var(--space-2);
+}
+
+@container (max-width: 559px) {
+  .sx-exercise-row-figure {
+    display: none;
+  }
+}
+
+.sx-day-card-figure {
+  --sx-figure-h: 52px;
+}
+
+.sx-session-history-item .sx-session-history-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.sx-session-history-figure {
+  --sx-figure-h: 50px;
+}
+
+/* On a phone the history row has no room for a third column: the session
+   name would be squeezed to one word per line. Fall back to the old layout. */
+@media (max-width: 560px) {
+  .sx-session-history-item .sx-session-history-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .sx-session-history-figure {
+    display: none;
+  }
+}
+
+@media print {
+  .sx-day-card-figure {
+    display: none;
+  }
+}
