@@ -21,7 +21,7 @@
   /* Text tiers */
   --text: #f2f2f3;
   --text-dim: #a8a8b0;
-  --text-faint: #7d7d86; /* >= 4.5:1 on --bg, --surface and --surface-2 */
+  --text-faint: #8a8a93; /* >= 4.5:1 on --bg, --surface, --surface-2 and --surface-3 */
 
   /* One accent, controls only, never data. */
   --accent: #d2f34c;
@@ -3357,4 +3357,124 @@ input[type="checkbox"],
 input[type="radio"],
 input[type="range"] {
   accent-color: var(--accent);
+}
+
+/* ------------------------------------------------ phase 4: micro-detail */
+
+/* Empty states: a quiet dashed well, centred, instead of loose grey text. */
+.sx-empty-state {
+  text-align: center;
+  padding: 28px 20px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.015);
+  color: var(--text-dim);
+  font-size: var(--fs-2);
+  line-height: 1.5;
+}
+
+li.sx-empty-state {
+  list-style: none;
+}
+
+/* Skeleton shimmer for any placeholder block: <div class="sx-skeleton"> */
+.sx-skeleton {
+  display: block;
+  min-height: 1em;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+  background-size: 200% 100%;
+  animation: sx-shimmer 1.4s linear infinite;
+}
+
+@keyframes sx-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Thumbnails fade in once decoded rather than popping. */
+.sx-thumb img {
+  animation: sx-fade var(--dur-3) var(--ease-out);
+}
+
+/* Scrollbars: thin, dark, out of the way. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border: 2px solid var(--bg);
+  border-radius: var(--r-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Reduced motion: also stop the one-shot entrances and the shimmer, and show
+   charts fully drawn. (The global rule above already zeroes durations.) */
+@media (prefers-reduced-motion: reduce) {
+  .sx-skeleton,
+  .sx-content,
+  .sx-drawer,
+  .sx-onboarding-card {
+    animation: none !important;
+  }
+
+  .sx-linechart-line {
+    stroke-dashoffset: 0 !important;
+  }
+}
+
+/* Print: strip the screen-only polish so sheets stay crisp and ink-light. */
+@media print {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .sx-session-entry,
+  .sx-settings-section,
+  .sx-template-option,
+  .sx-gap-item {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .sx-empty-state {
+    border: none;
+    background: none;
+    color: #555;
+    text-align: left;
+    padding: 4px 0;
+  }
+
+  .sx-eyebrow,
+  .sx-helper-text {
+    color: #555 !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+  }
 }

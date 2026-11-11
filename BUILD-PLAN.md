@@ -506,70 +506,94 @@ coverage table to that region's sub-groups.
 
 ### 8.1 Direction
 
-The app's entire thesis is "where is the load going". So **chroma is reserved for
-data**: the heat ramp is the only saturated colour in the interface, and every
-control is neutral or the single cool accent. Nothing in the chrome competes
-with the body map. This is the discipline that makes it look designed rather
-than decorated. Do not add a second decorative accent, gradients on buttons, or
-coloured category badges.
+"Precision instrument": calm, dense and exact. Large mono numbers do the work
+and the chrome steps back. **Chroma is reserved for data**: the heat ramp and
+the status colours are the only saturated colours on data, and the interface
+has one accent (lime) used on controls only, never on data. Surfaces are
+separated by light (hairlines, an inner top highlight, layered shadows), not
+hard borders. Do not add a second decorative accent or coloured category
+badges.
 
 ### 8.2 Tokens
 
-Declare in `:root` in `styles.css`. Every colour in the app must come from here.
+Declared in `:root` in `styles.css`; every colour comes from here. Existing
+names are kept so older rules keep working.
 
 ```css
---bg:        #101317;
---surface:   #171C22;
---surface-2: #1F262E;
---line:      #2C353F;
---line-soft: #222A33;
---text:      #E6EBF0;
---text-dim:  #8795A4;
---text-faint:#5C6875;
---accent:    #3FBFB4;   /* controls only, never data */
---accent-dim:#1E4F4C;
---under:     #4E7FA8;   /* status: below target */
---in:        #4FA77E;   /* status: in range */
---over:      #D8763C;   /* status: above ceiling */
---radius:    3px;       /* small and consistent; this is an instrument, not a card UI */
+/* surfaces: three elevation steps */
+--bg:#09090a; --surface:#101012; --surface-2:#17171a; --surface-3:#1f1f23;
+--line:#2a2a30; --line-soft:#1a1a1e;
+--hairline:rgba(255,255,255,.07); --highlight:rgba(255,255,255,.05);
+/* text tiers (faint is >= 4.5:1 on every surface) */
+--text:#f2f2f3; --text-dim:#a8a8b0; --text-faint:#8a8a93;
+/* the one accent: controls only, never data */
+--accent:#d2f34c; --accent-hover; --accent-press; --accent-ink:#11140a;
+--accent-dim:#232a0c; --accent-glow;
+/* data */
+--under:#4e7fa8; --in:#4fa77e; --over:#d8763c; --danger:#ef6a5b;
+--series-1:#c9a24b; --series-2:#8a7fd8;
+/* spacing 4px base: --space-1..10; radius: --r-sm 8 / --r-md 12 / --r-lg 20 / --r-pill */
+/* elevation: --elev-1/2/3 = ambient shadow + inner top highlight */
+/* motion: --ease-out, --dur-1 120ms / --dur-2 200ms / --dur-3 320ms */
 ```
+
+Keep `HEAT_STOPS` in `lib/constants.js` in step with the status colours.
 
 ### 8.3 Type
 
 ```
-Display / headings : "Space Grotesk", "Grotesk", system-ui, sans-serif   (500, 700)
-Body / UI          : "IBM Plex Sans", system-ui, -apple-system, sans-serif (400, 500)
-Numerals / data    : "IBM Plex Mono", ui-monospace, Menlo, monospace      (400, 500)
+Display / headings : "Geist", "Inter", system-ui, sans-serif       (500, 600)
+Body / UI          : "Geist", "Inter", system-ui, -apple-system    (400, 500)
+Numerals / data    : "Geist Mono", "IBM Plex Mono", ui-monospace   (400, 500)
 ```
 
 Every number in the interface (set counts, rep ranges, volume, rest seconds)
-uses the mono face with `font-variant-numeric: tabular-nums`. This is the
-typographic rule that makes the coverage table scannable and it is not optional.
+uses the mono face with `font-variant-numeric: tabular-nums`. This is not
+optional. Fonts load via a Google Fonts `<link>` in `index.html` with full
+system fallbacks; the offline PWA and the standalone `file://` build fall back
+to Inter or system fonts and must not break layout (self-hosting the files in
+`public/` is a known follow-up).
 
-Load fonts via a Google Fonts `<link>` in `index.html`, with the full system
-fallback stacks above. The standalone `file://` build will fall back to system
-fonts when offline; that is acceptable and must not break layout, so test with
-fonts blocked.
+Scale: 12 / 14 / 16 / 20 / 28 / 36 / 48 px. Headings weight 600 with
+`letter-spacing: -0.02em`. Section eyebrows in mono, 12px, uppercase,
+`letter-spacing: 0.12em`, `--text-faint`.
 
-Scale: 11 / 13 / 15 / 19 / 26 / 34 px. Headings in Space Grotesk 500 with
-`letter-spacing: -0.01em`. Section eyebrows in mono, 11px, uppercase,
-`letter-spacing: 0.08em`, `--text-faint`.
+### 8.4 Layout and shell
 
-### 8.4 Layout
+Desktop (>= 900px): fixed left rail (accent bar marks the active item, logo
+mark beside the wordmark), content area, and on Routine, Train and Coverage a
+sticky right column holding the body map so it updates live while editing.
 
-Desktop (>= 900px): fixed left rail with the four screens, content area, and on
-the Routine and Coverage screens a sticky right column holding the body map so
-it updates live while editing. That live update is the signature moment of the
-app; make sure adding a set visibly warms a region.
+Mobile: frosted-glass bottom tab bar, single column, body map collapses to a
+glass summary strip that expands on tap. Test at 360px width.
 
-Mobile: bottom tab bar, single column, body map collapses to a summary strip
-that expands on tap. Test at 360px width.
+Screens fade and rise 8px on change (`.sx-content` is keyed by screen).
+Sticky bars show their hairline only once the page has scrolled
+(`useScrolledFlag` sets `data-scrolled` on `<html>`).
 
-### 8.5 Quality floor
+### 8.5 Components
 
-Keyboard focus visible on every interactive element (`outline: 2px solid
-var(--accent); outline-offset: 2px`). `prefers-reduced-motion` respected: heat
-transitions drop to instant. All interactive targets at least 40px on touch.
+- Buttons: layered shadow, press-down on `:active`, variants `sx-primary`
+  (solid lime), `sx-ghost`, `sx-danger`.
+- Chips are pills; the active chip is a tinted lime fill.
+- Segmented control: an inset track with one sliding thumb measured from the
+  active option, so it also follows wrapped rows.
+- Inputs: filled, accent focus ring. Drawers: blurred backdrop, slide-in.
+- Train: weight and reps are the hero numbers; logging a set pops a solid lime
+  tick (and a short haptic where supported); the rest timer is a draining ring.
+- Charts: gradient area under series 1, line draws in on load.
+- Empty states: a dashed well with one line that names the fix. `.sx-skeleton`
+  is available for placeholders.
+
+### 8.6 Quality floor
+
+Keyboard focus visible on every interactive element (accent outline plus a
+soft glow). `prefers-reduced-motion` respected: durations drop to instant, the
+entrance animations and shimmer stop, and charts show fully drawn. All
+interactive targets at least 40px on touch. Contrast: `--text-faint` is at
+least 4.5:1 on `--bg`, `--surface`, `--surface-2` and `--surface-3`; the ink
+on a solid accent fill is about 14.8:1. Print strips shadows, gradients,
+blur and animation.
 
 ---
 
