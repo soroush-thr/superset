@@ -8,37 +8,80 @@
 :root {
   color-scheme: dark;
 
-  --bg: #000000;
-  --surface: #0a0a0a;
-  --surface-2: #141414;
-  --line: #262626;
-  --line-soft: #1a1a1a;
-  --text: #ededed;
-  --text-dim: #a1a1aa;
-  --text-faint: #71717a; /* >= 4.5:1 on --bg, --surface and --surface-2 */
-  --accent: #00e5ff; /* controls only, never data */
-  --accent-dim: #00333d;
-  --under: #4e7fa8; /* status: below target */
-  --in: #4fa77e; /* status: in range */
-  --over: #d8763c; /* status: above ceiling */
-  --series-1: #c9a24b; /* chart data series 1, e.g. est. 1RM */
-  --series-2: #8a7fd8; /* chart data series 2, e.g. top set weight / actual marker */
-  --radius: 12px;
+  /* Surfaces: three steps of elevation, separated by light not borders. */
+  --bg: #09090a;
+  --surface: #101012;
+  --surface-2: #17171a;
+  --surface-3: #1f1f23;
+  --line: #2a2a30;
+  --line-soft: #1a1a1e;
+  --hairline: rgba(255, 255, 255, 0.07);
+  --highlight: rgba(255, 255, 255, 0.05); /* 1px inner top light on raised things */
 
-  /* 8.3 type scale, px */
+  /* Text tiers */
+  --text: #f2f2f3;
+  --text-dim: #a8a8b0;
+  --text-faint: #7d7d86; /* >= 4.5:1 on --bg, --surface and --surface-2 */
+
+  /* One accent, controls only, never data. */
+  --accent: #d2f34c;
+  --accent-hover: #dffc6a;
+  --accent-press: #bfe036;
+  --accent-ink: #11140a; /* text on a solid accent fill */
+  --accent-dim: #232a0c; /* subtle accent fill / selected state */
+  --accent-glow: rgba(210, 243, 76, 0.18);
+
+  /* Data: status and chart series. Keep in step with HEAT_STOPS. */
+  --under: #4e7fa8;
+  --in: #4fa77e;
+  --over: #d8763c;
+  --danger: #ef6a5b;
+  --series-1: #c9a24b;
+  --series-2: #8a7fd8;
+
+  /* Spacing, 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius scale. --radius stays as the default control radius. */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+  --radius: var(--r-md);
+
+  /* Elevation: ambient shadow + inner top highlight. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 var(--highlight);
+  --elev-2: 0 6px 16px -4px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 0 var(--highlight);
+  --elev-3: 0 24px 60px -12px rgba(0, 0, 0, 0.7), 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 1px 0 var(--highlight);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+
+  /* Type scale, 1.25 ratio, px */
   --fs-1: 12px;
   --fs-2: 14px;
   --fs-3: 16px;
   --fs-4: 20px;
   --fs-5: 28px;
   --fs-6: 36px;
+  --fs-7: 48px;
 
-  --font-display: 'Inter', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  --font-display: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-body: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
-  --rail-width: 220px;
-  --bottom-bar-height: 56px;
+  --rail-width: 232px;
+  --bottom-bar-height: 60px;
 }
 
 /* --------------------------------------------------------------- reset */
@@ -58,7 +101,16 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: var(--fs-3);
-  line-height: 1.4;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 h1,
@@ -66,8 +118,9 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   margin: 0;
 }
 
@@ -91,7 +144,7 @@ textarea {
   font-family: var(--font-mono);
   font-size: var(--fs-1);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--text-faint);
 }
 
@@ -114,6 +167,7 @@ textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--accent-glow);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -125,26 +179,74 @@ textarea:focus-visible,
 
 button {
   background: var(--surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
   color: var(--text);
   cursor: pointer;
   min-height: 40px;
   min-width: 40px;
-  padding: 0 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  padding: 0 var(--space-4);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  box-shadow: var(--elev-1);
+  transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out),
+    transform var(--dur-1) var(--ease-out);
 }
 
 button:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transform: translateY(-1px);
+  background: var(--surface-3);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: var(--elev-2);
+}
+
+button:active {
+  transform: scale(0.98);
+  box-shadow: var(--elev-1);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 button.sx-primary {
-  background: var(--accent-dim);
-  border-color: var(--accent);
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset, 0 8px 20px -8px var(--accent-glow), var(--elev-1);
+}
+
+button.sx-primary:hover {
+  background: var(--accent-hover);
+}
+
+button.sx-primary:active {
+  background: var(--accent-press);
+}
+
+button.sx-ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text-dim);
+}
+
+button.sx-ghost:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+button.sx-danger {
+  color: var(--danger);
+}
+
+button.sx-danger:hover {
+  border-color: var(--danger);
+  background: rgba(239, 106, 91, 0.1);
 }
 
 /* -------------------------------------------------------------- 8.4 layout */
@@ -246,9 +348,9 @@ button.sx-primary {
     width: var(--rail-width);
     flex-shrink: 0;
     background: var(--surface);
-    border-right: 1px solid var(--line);
-    padding: 20px 12px;
-    gap: 4px;
+    border-right: 1px solid var(--hairline);
+    padding: var(--space-6) var(--space-3);
+    gap: var(--space-1);
   }
 
   .sx-layout {
@@ -271,6 +373,7 @@ button.sx-primary {
 }
 
 .sx-rail-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -280,25 +383,42 @@ button.sx-primary {
   text-align: left;
   background: transparent;
   border: none;
+  box-shadow: none;
   min-height: 40px;
-  font-size: var(--fs-3);
+  font-size: var(--fs-2);
 }
 
 .sx-rail-item:hover {
   background: var(--surface-2);
   color: var(--text);
+  box-shadow: none;
 }
 
 .sx-rail-item.sx-active {
   background: var(--surface-2);
   color: var(--text);
+  box-shadow: inset 0 1px 0 var(--highlight);
+}
+
+/* Active marker: a slim accent bar on the rail edge. */
+.sx-rail-item.sx-active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .sx-rail-brand {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 600;
   font-size: var(--fs-4);
-  padding: 6px 12px 18px;
+  letter-spacing: -0.03em;
+  padding: 4px 12px 24px;
 }
 
 /* Mobile: bottom tab bar, single column. Body map (when present) collapses
@@ -312,8 +432,10 @@ button.sx-primary {
   display: flex;
   height: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--surface);
-  border-top: 1px solid var(--line);
+  background: rgba(16, 16, 18, 0.78);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-top: 1px solid var(--hairline);
   z-index: 10;
 }
 
@@ -333,9 +455,16 @@ button.sx-primary {
   background: transparent;
   border: none;
   border-radius: 0;
-  color: var(--text-dim);
-  font-size: var(--fs-1);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 500;
+  box-shadow: none;
   min-height: var(--bottom-bar-height);
+}
+
+.sx-bottom-item:hover {
+  background: transparent;
+  box-shadow: none;
 }
 
 .sx-bottom-item.sx-active {
@@ -358,25 +487,25 @@ button.sx-primary {
 /* --------------------------------------------------------- ui primitives */
 
 .sx-chip {
-  min-height: 40px;
-  padding: 0 12px;
-  border-radius: var(--radius);
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--hairline);
   color: var(--text-dim);
   font-size: var(--fs-2);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
+  box-shadow: none;
 }
 
 .sx-chip:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+  color: var(--text);
+  box-shadow: none;
 }
 
 .sx-chip.sx-active {
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--accent-dim);
+  border-color: rgba(210, 243, 76, 0.55);
+  color: var(--accent);
 }
 
 /* Joined buttons, not a field: shrink-wrapped to its options (never
@@ -389,9 +518,10 @@ button.sx-primary {
   max-width: 100%;
   gap: 4px;
   padding: 4px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: calc(var(--radius) + 2px);
+  background: var(--bg);
+  border: 1px solid var(--hairline);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .sx-segmented-item {
@@ -401,17 +531,21 @@ button.sx-primary {
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-dim);
+  box-shadow: none;
 }
 
 .sx-segmented-item:hover {
   color: var(--text);
+  background: transparent;
   border-color: transparent;
+  box-shadow: none;
 }
 
 .sx-segmented-item.sx-active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
+  background: var(--surface-3);
+  border-color: var(--hairline);
   color: var(--text);
+  box-shadow: var(--elev-2);
 }
 
 @media (max-width: 599px) {
@@ -457,10 +591,14 @@ button.sx-primary {
   width: 56px;
   min-height: 40px;
   text-align: center;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  background: var(--bg);
+  border: 1px solid var(--hairline);
   border-left: none;
   border-right: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: var(--fs-3);
   -moz-appearance: textfield;
 }
 
@@ -473,10 +611,26 @@ button.sx-primary {
 .sx-drawer-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   z-index: 20;
   display: flex;
   justify-content: flex-end;
+  animation: sx-fade var(--dur-2) var(--ease-out);
+}
+
+@keyframes sx-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sx-slide-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
 }
 
 .sx-drawer {
@@ -484,8 +638,10 @@ button.sx-primary {
   height: 100vh;
   height: 100dvh;
   background: var(--surface);
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--hairline);
+  box-shadow: var(--elev-3);
   overflow-y: auto;
+  animation: sx-slide-in var(--dur-3) var(--ease-out);
 }
 
 .sx-drawer-header {
@@ -493,10 +649,13 @@ button.sx-primary {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hairline);
   position: sticky;
   top: 0;
-  background: var(--surface);
+  background: rgba(16, 16, 18, 0.8);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  z-index: 1;
 }
 
 .sx-drawer-body {
@@ -549,13 +708,30 @@ button.sx-primary {
 /* ------------------------------------------------------------------ forms */
 
 .sx-input {
-  min-height: 40px;
+  min-height: 44px;
   background: var(--surface-2);
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
   color: var(--text);
-  padding: 0 10px;
+  padding: 0 var(--space-3);
   font-size: var(--fs-3);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: border-color var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out);
+}
+
+.sx-input::placeholder {
+  color: var(--text-faint);
+}
+
+.sx-input:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.sx-input:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .sx-field {
