@@ -850,7 +850,6 @@ button.sx-danger:hover {
 }
 
 .sx-virtual-list {
-  overflow-y: auto;
   border-top: 1px solid var(--line-soft);
 }
 

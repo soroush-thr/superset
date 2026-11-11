@@ -15,7 +15,6 @@ const LEVELS = ['beginner', 'intermediate', 'expert']
 const MECHANICS = ['compound', 'isolation', 'unspecified']
 const FORCES = ['push', 'pull', 'static', 'unspecified']
 const ROW_HEIGHT = 68
-const LIST_HEIGHT = 520
 
 function toggle(set, value) {
   const next = new Set(set)
@@ -247,7 +246,6 @@ export default function Library() {
         <VirtualList
           items={filtered}
           rowHeight={ROW_HEIGHT}
-          height={LIST_HEIGHT}
           renderRow={(exercise) => (
             <ExerciseRow
               exercise={exercise}
