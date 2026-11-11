@@ -166,7 +166,11 @@ function TickButton({ set, index, onClick }) {
       className={`sx-set-tick${set.done ? ' sx-done' : ''}`}
       aria-pressed={set.done}
       aria-label={`Set ${index + 1} ${set.done ? 'done, tap to undo' : 'mark done'}`}
-      onClick={onClick}
+      onClick={(e) => {
+        // A short buzz when a set is logged (not when undone); no-op where unsupported.
+        if (!set.done && typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(12)
+        onClick(e)
+      }}
     >
       ✓
     </button>
