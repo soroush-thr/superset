@@ -480,6 +480,7 @@ button.sx-danger:hover {
 
 .sx-bottom-item {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -805,8 +806,8 @@ button.sx-danger:hover {
   position: sticky;
   top: 0;
   z-index: 4;
-  margin: 0 -16px;
-  padding: 4px 16px 0;
+  margin: 0 calc(-1 * var(--gutter-r, 16px)) 0 calc(-1 * var(--gutter-l, 16px));
+  padding: 4px var(--gutter-r, 16px) 0 var(--gutter-l, 16px);
   background: rgba(9, 9, 10, 0.86);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -1018,6 +1019,36 @@ button.sx-danger:hover {
     width: 90px;
     padding-left: 6px;
     padding-right: 2px;
+  }
+}
+
+/* Small phones (<=420px wide, e.g. 360x640 Androids and iPhone SE): the row
+   has ~200px for text after the thumb and two buttons. Shrink the fixed parts
+   and drop the level chip (it is in the detail drawer) so the name and the
+   equipment chip are never cut mid-word. */
+@media (max-width: 420px) {
+  .sx-exercise-thumb {
+    width: 40px;
+    height: 40px;
+  }
+
+  .sx-exercise-row-main {
+    gap: 8px;
+  }
+
+  .sx-exercise-row-chips .sx-chip-level {
+    display: none;
+  }
+
+  .sx-favorite-star {
+    min-width: 30px;
+  }
+
+  .sx-add-to-day {
+    width: 36px;
+    min-width: 36px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 
@@ -3781,5 +3812,64 @@ li.sx-empty-state {
 @media print {
   .sx-day-card-figure {
     display: none;
+  }
+}
+
+/* ------------------------------------------------------ responsive gutters */
+
+/* The desktop gutter (48px each side) is far too wide on a phone: it ate ~30%
+   of a 320px screen and squeezed tables and cards. Scale it down by width, and
+   respect the notch / rounded-corner insets in landscape (viewport-fit=cover).
+   --gutter-l / --gutter-r are variables so full-bleed children (the sticky
+   Library toolbar) can cancel exactly the same amount. */
+.sx-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (max-width: 899px) {
+  .sx-content {
+    --gutter-l: max(24px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(24px, env(safe-area-inset-right, 0px));
+    padding: 20px var(--gutter-r) 20px var(--gutter-l);
+    padding-bottom: calc(var(--bottom-bar-height) + 16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 599px) {
+  .sx-content {
+    --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+    padding-top: 16px;
+  }
+
+  .sx-settings-section {
+    padding: 16px 14px;
+  }
+}
+
+@media (max-width: 359px) {
+  .sx-content {
+    --gutter-l: max(12px, env(safe-area-inset-left, 0px));
+    --gutter-r: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .sx-settings-section {
+    padding: 14px 10px;
+  }
+
+  /* Five bottom-nav labels must fit a 280px foldable cover screen. */
+  .sx-bottom-item {
+    font-size: 10px;
+  }
+
+  /* Four-option controls (Train: Active / History / Progress / Generate) fit
+     on one row instead of wrapping a lone option onto a second line. */
+  .sx-segmented {
+    gap: 2px;
+  }
+
+  .sx-segmented-item {
+    padding: 0 6px;
   }
 }

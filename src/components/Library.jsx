@@ -340,7 +340,7 @@ function ExerciseRow({ exercise, onOpen, activeRoutine, onAddToDay, isFavorite, 
           <span className="sx-exercise-row-chips">
             {exercise.custom && <span className="sx-chip sx-chip-static">Custom</span>}
             <span className="sx-chip sx-chip-static">{label(exercise.equipment)}</span>
-            <span className="sx-chip sx-chip-static">{label(exercise.level)}</span>
+            <span className="sx-chip sx-chip-static sx-chip-level">{label(exercise.level)}</span>
             <span className="sx-exercise-muscle-summary">{muscleSummary(exercise.sub)}</span>
           </span>
         </div>
